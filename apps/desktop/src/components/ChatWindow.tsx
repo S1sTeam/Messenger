@@ -25,6 +25,7 @@ export const ChatWindow = ({ chatId, onChatDeleted }: ChatWindowProps) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const markedAsReadRef = useRef<Set<string>>(new Set());
 
   const messages = useChatStore((state) => state.messages[chatId] || []);
   const chats = useChatStore((state) => state.chats);
@@ -43,18 +44,22 @@ export const ChatWindow = ({ chatId, onChatDeleted }: ChatWindowProps) => {
   useEffect(() => {
     if (!chatId) return;
 
+    markedAsReadRef.current.clear();
     loadMessages(chatId);
+  }, [chatId, loadMessages]);
 
-    if (socket && messages.length > 0) {
-      const unreadMessageIds = messages
-        .filter((m) => !m.isRead && m.senderId !== user?.id)
-        .map((m) => m.id);
+  useEffect(() => {
+    if (!socket || messages.length === 0) return;
 
-      if (unreadMessageIds.length > 0) {
-        socket.emit('messages:markRead', { chatId, messageIds: unreadMessageIds });
-      }
+    const unreadMessageIds = messages
+      .filter((m) => !m.isRead && m.senderId !== user?.id && !markedAsReadRef.current.has(m.id))
+      .map((m) => m.id);
+
+    if (unreadMessageIds.length > 0) {
+      unreadMessageIds.forEach((id) => markedAsReadRef.current.add(id));
+      socket.emit('messages:markRead', { chatId, messageIds: unreadMessageIds });
     }
-  }, [chatId, messages.length, socket, user?.id, loadMessages]);
+  }, [chatId, messages, socket, user?.id]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });

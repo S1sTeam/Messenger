@@ -2,6 +2,12 @@ import { create } from 'zustand';
 import { io, Socket } from 'socket.io-client';
 import { SOCKET_ORIGIN } from '../config/network';
 
+const logDebug = (...args: unknown[]) => {
+  if (import.meta.env.DEV) {
+    console.log(...args);
+  }
+};
+
 interface Message {
   id: string;
   chatId: string;
@@ -66,14 +72,14 @@ export const useChatStore = create<ChatState>((set, get) => ({
       existingSocket.disconnect();
     }
 
-    console.log('Initializing socket for user:', userId);
+    logDebug('Initializing socket for user:', userId);
     const socket = io(SOCKET_ORIGIN, {
       auth: { token },
       query: { userId }
     });
 
     socket.on('connect', () => {
-      console.log('Socket connected:', socket.id);
+      logDebug('Socket connected:', socket.id);
     });
 
     socket.on('connect_error', (error) => {
@@ -81,7 +87,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     });
 
     socket.on('message:receive', (message: Message) => {
-      console.log('Message received from another user:', message);
+      logDebug('Message received from another user:', message);
       
       set((state) => ({
         messages: {
@@ -104,7 +110,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     });
 
     socket.on('message:sent', (message: Message) => {
-      console.log('Message sent confirmation:', message);
+      logDebug('Message sent confirmation:', message);
       
       // Добавляем своё отправленное сообщение
       set((state) => ({
@@ -138,27 +144,27 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
     // Обработка онлайн статуса
     socket.on('user:online', ({ userId }: { userId: string }) => {
-      console.log('User came online:', userId);
+      logDebug('User came online:', userId);
       set((state) => {
         const newOnlineUsers = new Set(state.onlineUsers);
         newOnlineUsers.add(userId);
-        console.log('Updated online users:', Array.from(newOnlineUsers));
+        logDebug('Updated online users:', Array.from(newOnlineUsers));
         return { onlineUsers: newOnlineUsers };
       });
     });
 
     socket.on('user:offline', ({ userId }: { userId: string }) => {
-      console.log('User went offline:', userId);
+      logDebug('User went offline:', userId);
       set((state) => {
         const newOnlineUsers = new Set(state.onlineUsers);
         newOnlineUsers.delete(userId);
-        console.log('Updated online users:', Array.from(newOnlineUsers));
+        logDebug('Updated online users:', Array.from(newOnlineUsers));
         return { onlineUsers: newOnlineUsers };
       });
     });
 
     socket.on('users:online', (userIds: string[]) => {
-      console.log('Online users list received:', userIds.length, 'users', userIds);
+      logDebug('Online users list received:', userIds.length, 'users', userIds);
       set({ onlineUsers: new Set(userIds) });
     });
 
@@ -194,7 +200,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
         createdAt: new Date()
       };
 
-      console.log('Sending message:', message);
+      logDebug('Sending message:', message);
       socket.emit('message:send', message);
       
       // НЕ добавляем оптимистично - дождемся ответа от сервера
@@ -234,7 +240,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       }
       
       const data = await response.json();
-      console.log('Chats loaded:', data.chats);
+      logDebug('Chats loaded:', data.chats);
       set({ chats: data.chats || [] });
     } catch (error) {
       console.error('Failed to load chats:', error);
@@ -250,7 +256,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       const { state } = JSON.parse(authStorage);
       const token = state?.token;
       
-      const response = await fetch(`http://localhost:3000/api/chats/${chatId}/messages`, {
+      const response = await fetch(`http://localhost:3000/api/chats/${chatId}/messages?limit=120`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -262,7 +268,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       }
       
       const data = await response.json();
-      console.log('Messages loaded for chat', chatId, ':', data.messages.length, 'messages');
+      logDebug('Messages loaded for chat', chatId, ':', data.messages.length, 'messages');
       set((state) => ({
         messages: {
           ...state.messages,

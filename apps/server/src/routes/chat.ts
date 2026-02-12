@@ -91,7 +91,10 @@ chatRouter.get('/:chatId/messages', authMiddleware, async (req: AuthRequest, res
       return res.status(403).json({ error: 'Нет доступа к чату' });
     }
 
-    const messages = await prisma.message.findMany({
+    const limitParam = Number.parseInt(String(req.query.limit ?? '120'), 10);
+    const limit = Number.isNaN(limitParam) ? 120 : Math.min(Math.max(limitParam, 20), 500);
+
+    const messagesDesc = await prisma.message.findMany({
       where: { chatId },
       include: {
         sender: {
@@ -103,9 +106,12 @@ chatRouter.get('/:chatId/messages', authMiddleware, async (req: AuthRequest, res
         }
       },
       orderBy: {
-        createdAt: 'asc'
-      }
+        createdAt: 'desc'
+      },
+      take: limit
     });
+
+    const messages = [...messagesDesc].reverse();
 
     const messagesFormatted = messages.map(msg => ({
       id: msg.id,
@@ -144,36 +150,52 @@ chatRouter.post('/', authMiddleware, async (req: AuthRequest, res) => {
     }
 
     // Проверяем, существует ли уже чат между этими пользователями
-    const existingChats = await prisma.chat.findMany({
+    const existingChat = await prisma.chat.findFirst({
       where: {
         type: 'private',
-        participants: {
-          some: {
-            userId: userId
+        AND: [
+          {
+            participants: {
+              some: {
+                userId
+              }
+            }
+          },
+          {
+            participants: {
+              some: {
+                userId: otherUserId
+              }
+            }
+          },
+          {
+            participants: {
+              every: {
+                userId: {
+                  in: [userId, otherUserId]
+                }
+              }
+            }
           }
-        }
+        ]
       },
       include: {
-        participants: true
+        participants: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                displayName: true,
+                avatar: true
+              }
+            }
+          }
+        }
       }
     });
 
-    // Ищем чат, где оба пользователя участники
-    const existingChat = existingChats.find(chat => {
-      const participantIds = chat.participants.map(p => p.userId);
-      return participantIds.includes(userId) && participantIds.includes(otherUserId) && participantIds.length === 2;
-    });
-
     if (existingChat) {
-      const otherParticipant = existingChat.participants.find(p => p.userId !== userId);
-      const otherUserData = await prisma.user.findUnique({
-        where: { id: otherParticipant!.userId },
-        select: {
-          id: true,
-          displayName: true,
-          avatar: true
-        }
-      });
+      const otherUserData = existingChat.participants.find((p) => p.userId !== userId)?.user;
 
       return res.json({
         chat: {
