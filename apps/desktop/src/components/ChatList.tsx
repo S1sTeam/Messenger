@@ -21,34 +21,29 @@ export const ChatList = ({ selectedChat, onSelectChat }: ChatListProps) => {
   const user = useAuthStore((state) => state.user);
 
   useEffect(() => {
-    console.log('ChatList mounted. Token:', !!token, 'user:', user?.id);
     if (token && user) {
-      console.log('Loading chats...');
-      loadChats();
+      void loadChats();
     }
-  }, [token, user?.id, loadChats]);
+  }, [token, user, loadChats]);
 
-  // Разделяем чаты на категории
-  const archivedChats = chats.filter(chat => chat.isArchived);
-  const activeChats = chats.filter(chat => !chat.isArchived);
-  
-  // Сортируем активные чаты: закрепленные сверху
-  const pinnedChats = activeChats.filter(chat => chat.isPinned);
-  const regularChats = activeChats.filter(chat => !chat.isPinned);
+  const archivedChats = chats.filter((chat) => chat.isArchived);
+  const activeChats = chats.filter((chat) => !chat.isArchived);
 
-  // Фильтруем по поиску
-  const filteredPinned = pinnedChats.filter(chat =>
-    chat.name.toLowerCase().includes(searchQuery.toLowerCase())
+  const pinnedChats = activeChats.filter((chat) => chat.isPinned);
+  const regularChats = activeChats.filter((chat) => !chat.isPinned);
+
+  const filteredPinned = pinnedChats.filter((chat) =>
+    chat.name.toLowerCase().includes(searchQuery.toLowerCase()),
   );
-  const filteredRegular = regularChats.filter(chat =>
-    chat.name.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredRegular = regularChats.filter((chat) =>
+    chat.name.toLowerCase().includes(searchQuery.toLowerCase()),
   );
-  const filteredArchived = archivedChats.filter(chat =>
-    chat.name.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredArchived = archivedChats.filter((chat) =>
+    chat.name.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   return (
-    <motion.div 
+    <motion.div
       className={styles.container}
       initial={{ x: -320 }}
       animate={{ x: 0 }}
@@ -66,7 +61,6 @@ export const ChatList = ({ selectedChat, onSelectChat }: ChatListProps) => {
       </div>
 
       <div className={styles.list}>
-        {/* Архив */}
         {archivedChats.length > 0 && (
           <div className={styles.archiveSection}>
             <motion.div
@@ -81,38 +75,38 @@ export const ChatList = ({ selectedChat, onSelectChat }: ChatListProps) => {
                 {showArchive ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
               </span>
             </motion.div>
-            
-            {showArchive && filteredArchived.map((chat, index) => {
-              const otherUserId = chat.participants.find(id => id !== user?.id);
-              const isOnline = otherUserId ? isUserOnline(otherUserId) : false;
-              
-              return (
-                <ChatListItem
-                  key={chat.id}
-                  chat={{
-                    id: chat.id,
-                    name: chat.name,
-                    avatar: chat.avatar,
-                    lastMessage: chat.lastMessage || 'Нет сообщений',
-                    time: chat.lastMessageTime || '',
-                    unread: chat.unread,
-                    participants: chat.participants
-                  }}
-                  isSelected={selectedChat === chat.id}
-                  onClick={() => onSelectChat(chat.id)}
-                  index={index}
-                  isOnline={isOnline}
-                />
-              );
-            })}
+
+            {showArchive &&
+              filteredArchived.map((chat, index) => {
+                const otherUserId = chat.participants.find((id) => id !== user?.id);
+                const isOnline = otherUserId ? isUserOnline(otherUserId) : false;
+
+                return (
+                  <ChatListItem
+                    key={chat.id}
+                    chat={{
+                      id: chat.id,
+                      name: chat.name,
+                      avatar: chat.avatar,
+                      lastMessage: chat.lastMessage || 'Нет сообщений',
+                      time: chat.lastMessageTime || '',
+                      unread: chat.unread,
+                      participants: chat.participants,
+                    }}
+                    isSelected={selectedChat === chat.id}
+                    onClick={() => onSelectChat(chat.id)}
+                    index={index}
+                    isOnline={isOnline}
+                  />
+                );
+              })}
           </div>
         )}
 
-        {/* Закрепленные чаты */}
         {filteredPinned.map((chat, index) => {
-          const otherUserId = chat.participants.find(id => id !== user?.id);
+          const otherUserId = chat.participants.find((id) => id !== user?.id);
           const isOnline = otherUserId ? isUserOnline(otherUserId) : false;
-          
+
           return (
             <ChatListItem
               key={chat.id}
@@ -123,23 +117,22 @@ export const ChatList = ({ selectedChat, onSelectChat }: ChatListProps) => {
                 lastMessage: chat.lastMessage || 'Нет сообщений',
                 time: chat.lastMessageTime || '',
                 unread: chat.unread,
-                participants: chat.participants
+                participants: chat.participants,
               }}
               isSelected={selectedChat === chat.id}
               onClick={() => onSelectChat(chat.id)}
               index={index}
               isOnline={isOnline}
-              isPinned={true}
+              isPinned
             />
           );
         })}
 
-        {/* Обычные чаты */}
         {filteredRegular.length > 0 ? (
           filteredRegular.map((chat, index) => {
-            const otherUserId = chat.participants.find(id => id !== user?.id);
+            const otherUserId = chat.participants.find((id) => id !== user?.id);
             const isOnline = otherUserId ? isUserOnline(otherUserId) : false;
-            
+
             return (
               <ChatListItem
                 key={chat.id}
@@ -150,7 +143,7 @@ export const ChatList = ({ selectedChat, onSelectChat }: ChatListProps) => {
                   lastMessage: chat.lastMessage || 'Нет сообщений',
                   time: chat.lastMessageTime || '',
                   unread: chat.unread,
-                  participants: chat.participants
+                  participants: chat.participants,
                 }}
                 isSelected={selectedChat === chat.id}
                 onClick={() => onSelectChat(chat.id)}
@@ -160,7 +153,7 @@ export const ChatList = ({ selectedChat, onSelectChat }: ChatListProps) => {
             );
           })
         ) : filteredPinned.length === 0 && archivedChats.length === 0 ? (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             className={styles.emptyState}

@@ -63,6 +63,12 @@ export const CallModal = ({
     frameRate: { ideal: 60, max: 60 },
   };
 
+  const fallbackCameraVideoConstraints: MediaTrackConstraints = {
+    width: { ideal: 1280, max: 1280 },
+    height: { ideal: 720, max: 720 },
+    frameRate: { ideal: 30, max: 30 },
+  };
+
   const screenVideoConstraints: MediaTrackConstraints = {
     width: { ideal: 1920, max: 1920 },
     height: { ideal: 1080, max: 1080 },
@@ -128,19 +134,31 @@ export const CallModal = ({
     }
 
     try {
-      const constraints: MediaStreamConstraints = {
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-        },
-        video:
-          callType === 'video'
-            ? cameraVideoConstraints
-            : false,
+      const audioConstraints: MediaTrackConstraints = {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
       };
 
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      const stream =
+        callType === 'video'
+          ? await navigator.mediaDevices
+              .getUserMedia({
+                audio: audioConstraints,
+                video: cameraVideoConstraints,
+              })
+              .catch(async (error) => {
+                console.warn('Primary camera profile failed, fallback to 720p30:', error);
+                return navigator.mediaDevices.getUserMedia({
+                  audio: audioConstraints,
+                  video: fallbackCameraVideoConstraints,
+                });
+              })
+          : await navigator.mediaDevices.getUserMedia({
+              audio: audioConstraints,
+              video: false,
+            });
+
       localStreamRef.current = stream;
       microphoneTrackRef.current = stream.getAudioTracks()[0] || null;
 
@@ -483,6 +501,14 @@ export const CallModal = ({
     startAsCaller,
   ]);
 
+  useEffect(() => {
+    if (!isOpen || !isInitiator || callStatus !== 'calling') {
+      return;
+    }
+
+    void initializeMedia();
+  }, [callStatus, initializeMedia, isInitiator, isOpen]);
+
   // Если исходящий звонок не приняли за 30 секунд, считаем его пропущенным.
   useEffect(() => {
     if (!isOpen || !isInitiator || callStatus !== 'calling' || !socket || !recipientId) {
@@ -593,10 +619,17 @@ export const CallModal = ({
           },
         });
       } catch {
-        screenStream = await navigator.mediaDevices.getDisplayMedia({
-          video: screenVideoConstraints,
-          audio: false,
-        });
+        try {
+          screenStream = await navigator.mediaDevices.getDisplayMedia({
+            video: screenVideoConstraints,
+            audio: false,
+          });
+        } catch {
+          screenStream = await navigator.mediaDevices.getDisplayMedia({
+            video: true,
+            audio: false,
+          });
+        }
       }
 
       const screenTrack = screenStream.getVideoTracks()[0];

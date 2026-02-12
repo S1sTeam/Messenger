@@ -3,13 +3,28 @@ import { io, Socket } from 'socket.io-client';
 import { SOCKET_ORIGIN } from '../config/network';
 
 const logDebug = (...args: unknown[]) => {
-  if (import.meta.env.DEV) {
+  if (import.meta.env.VITE_ENABLE_DEBUG_LOGS === 'true') {
     console.log(...args);
+  }
+};
+
+const pendingMessageTimeouts = new Map<string, number>();
+
+const makeClientMessageId = () => `tmp-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+
+const readAuthState = () => {
+  try {
+    const raw = localStorage.getItem('auth-storage');
+    if (!raw) return null;
+    return JSON.parse(raw)?.state || null;
+  } catch {
+    return null;
   }
 };
 
 interface Message {
   id: string;
+  clientMessageId?: string;
   chatId: string;
   senderId: string;
   senderName: string;
@@ -17,7 +32,10 @@ interface Message {
   content: string;
   createdAt: Date;
   isRead: boolean;
+  status?: 'sending' | 'sent' | 'failed';
 }
+
+const asSentMessage = (message: Message): Message => ({ ...message, status: 'sent' });
 
 interface Chat {
   id: string;
@@ -40,11 +58,10 @@ interface ChatState {
   currentChat: string | null;
   isTyping: Record<string, boolean>;
   onlineUsers: Set<string>;
-  
   initSocket: (token: string, userId: string) => void;
   disconnectSocket: () => void;
   setCurrentChat: (chatId: string | null) => void;
-  sendMessage: (chatId: string, content: string) => void;
+  sendMessage: (chatId: string, content: string) => Promise<void>;
   loadChats: () => Promise<void>;
   loadMessages: (chatId: string) => Promise<void>;
   createChat: (userId: string) => Promise<void>;
@@ -64,18 +81,26 @@ export const useChatStore = create<ChatState>((set, get) => ({
   initSocket: (token: string, userId: string) => {
     const { socket: existingSocket, socketUserId } = get();
 
-    if (existingSocket && socketUserId === userId && existingSocket.connected) {
+    if (existingSocket && socketUserId === userId) {
+      if (!existingSocket.connected && !existingSocket.active) {
+        existingSocket.connect();
+      }
       return;
     }
 
     if (existingSocket) {
+      existingSocket.removeAllListeners();
       existingSocket.disconnect();
     }
 
-    logDebug('Initializing socket for user:', userId);
     const socket = io(SOCKET_ORIGIN, {
       auth: { token },
-      query: { userId }
+      query: { userId },
+      transports: ['websocket'],
+      timeout: 8000,
+      reconnectionAttempts: 8,
+      reconnectionDelay: 400,
+      reconnectionDelayMax: 1500,
     });
 
     socket.on('connect', () => {
@@ -83,88 +108,96 @@ export const useChatStore = create<ChatState>((set, get) => ({
     });
 
     socket.on('connect_error', (error) => {
-      console.error('Socket connection error:', error);
+      console.error('Socket connection error:', error.message);
     });
 
     socket.on('message:receive', (message: Message) => {
-      logDebug('Message received from another user:', message);
-      
-      set((state) => ({
-        messages: {
-          ...state.messages,
-          [message.chatId]: [...(state.messages[message.chatId] || []), message]
-        }
-      }));
-      
-      // Update last message in chat list ONLY if it's from another user
-      const currentUserId = userId;
-      if (message.senderId !== currentUserId) {
-        set((state) => ({
-          chats: state.chats.map(chat => 
-            chat.id === message.chatId 
-              ? { ...chat, lastMessage: message.content, lastMessageTime: 'Сейчас', unread: chat.unread + 1 }
-              : chat
-          )
-        }));
-      }
+      set((state) => {
+        const chatMessages = state.messages[message.chatId] || [];
+        const alreadyExists = chatMessages.some((item) => item.id === message.id);
+
+        return {
+          messages: {
+            ...state.messages,
+            [message.chatId]: alreadyExists ? chatMessages : [...chatMessages, asSentMessage(message)],
+          },
+          chats: state.chats.map((chat) =>
+            chat.id === message.chatId
+              ? {
+                  ...chat,
+                  lastMessage: message.content,
+                  lastMessageTime: 'Сейчас',
+                  unread: message.senderId !== userId ? chat.unread + 1 : chat.unread,
+                }
+              : chat,
+          ),
+        };
+      });
     });
 
     socket.on('message:sent', (message: Message) => {
-      logDebug('Message sent confirmation:', message);
-      
-      // Добавляем своё отправленное сообщение
-      set((state) => ({
-        messages: {
-          ...state.messages,
-          [message.chatId]: [...(state.messages[message.chatId] || []), message]
+      if (message.clientMessageId) {
+        const timeoutId = pendingMessageTimeouts.get(message.clientMessageId);
+        if (timeoutId) {
+          window.clearTimeout(timeoutId);
+          pendingMessageTimeouts.delete(message.clientMessageId);
         }
-      }));
-      
-      // Обновляем последнее сообщение в списке чатов БЕЗ увеличения unread
-      set((state) => ({
-        chats: state.chats.map(chat => 
-          chat.id === message.chatId 
-            ? { ...chat, lastMessage: message.content, lastMessageTime: 'Сейчас' }
-            : chat
-        )
-      }));
+      }
+
+      set((state) => {
+        const chatMessages = state.messages[message.chatId] || [];
+        const optimisticIndex = message.clientMessageId
+          ? chatMessages.findIndex((item) => item.id === message.clientMessageId || item.clientMessageId === message.clientMessageId)
+          : -1;
+
+        const mergedMessages =
+          optimisticIndex >= 0
+            ? chatMessages.map((item, index) => (index === optimisticIndex ? asSentMessage(message) : item))
+            : chatMessages.some((item) => item.id === message.id)
+              ? chatMessages
+              : [...chatMessages, asSentMessage(message)];
+
+        return {
+          messages: {
+            ...state.messages,
+            [message.chatId]: mergedMessages,
+          },
+          chats: state.chats.map((chat) =>
+            chat.id === message.chatId ? { ...chat, lastMessage: message.content, lastMessageTime: 'Сейчас' } : chat,
+          ),
+        };
+      });
     });
 
     socket.on('user:typing', (chatId: string) => {
       set((state) => ({
-        isTyping: { ...state.isTyping, [chatId]: true }
+        isTyping: { ...state.isTyping, [chatId]: true },
       }));
-      
-      setTimeout(() => {
+
+      window.setTimeout(() => {
         set((state) => ({
-          isTyping: { ...state.isTyping, [chatId]: false }
+          isTyping: { ...state.isTyping, [chatId]: false },
         }));
       }, 3000);
     });
 
-    // Обработка онлайн статуса
-    socket.on('user:online', ({ userId }: { userId: string }) => {
-      logDebug('User came online:', userId);
+    socket.on('user:online', ({ userId: onlineUserId }: { userId: string }) => {
       set((state) => {
         const newOnlineUsers = new Set(state.onlineUsers);
-        newOnlineUsers.add(userId);
-        logDebug('Updated online users:', Array.from(newOnlineUsers));
+        newOnlineUsers.add(onlineUserId);
         return { onlineUsers: newOnlineUsers };
       });
     });
 
-    socket.on('user:offline', ({ userId }: { userId: string }) => {
-      logDebug('User went offline:', userId);
+    socket.on('user:offline', ({ userId: offlineUserId }: { userId: string }) => {
       set((state) => {
         const newOnlineUsers = new Set(state.onlineUsers);
-        newOnlineUsers.delete(userId);
-        logDebug('Updated online users:', Array.from(newOnlineUsers));
+        newOnlineUsers.delete(offlineUserId);
         return { onlineUsers: newOnlineUsers };
       });
     });
 
     socket.on('users:online', (userIds: string[]) => {
-      logDebug('Online users list received:', userIds.length, 'users', userIds);
       set({ onlineUsers: new Set(userIds) });
     });
 
@@ -174,73 +207,103 @@ export const useChatStore = create<ChatState>((set, get) => ({
   disconnectSocket: () => {
     const { socket } = get();
     if (socket) {
+      socket.removeAllListeners();
       socket.disconnect();
-      set({ socket: null, socketUserId: null, onlineUsers: new Set<string>() });
     }
+
+    for (const timeoutId of pendingMessageTimeouts.values()) {
+      window.clearTimeout(timeoutId);
+    }
+    pendingMessageTimeouts.clear();
+
+    set({ socket: null, socketUserId: null, onlineUsers: new Set<string>() });
   },
 
   setCurrentChat: (chatId: string | null) => {
     set({ currentChat: chatId });
     if (chatId) {
-      get().loadMessages(chatId);
+      void get().loadMessages(chatId);
     }
   },
 
-  sendMessage: (chatId: string, content: string) => {
+  sendMessage: async (chatId: string, content: string) => {
     const { socket } = get();
     if (!socket) {
-      console.error('Socket not connected');
-      return Promise.reject(new Error('Socket not connected'));
+      throw new Error('Socket not connected');
     }
 
-    return new Promise<void>((resolve) => {
-      const message = {
-        chatId,
-        content,
-        createdAt: new Date()
-      };
+    const normalizedContent = content.trim();
+    if (!normalizedContent) {
+      return;
+    }
 
-      logDebug('Sending message:', message);
-      socket.emit('message:send', message);
-      
-      // НЕ добавляем оптимистично - дождемся ответа от сервера
-      // Сервер вернет сообщение через message:receive
-      
-      // Update chat list
+    const authState = readAuthState();
+    const currentUser = authState?.user;
+    const clientMessageId = makeClientMessageId();
+
+    const optimisticMessage: Message = {
+      id: clientMessageId,
+      clientMessageId,
+      chatId,
+      senderId: currentUser?.id || '',
+      senderName: currentUser?.displayName || currentUser?.phone || 'Вы',
+      senderAvatar: currentUser?.avatar || '👤',
+      content: normalizedContent,
+      createdAt: new Date(),
+      isRead: true,
+      status: 'sending',
+    };
+
+    set((state) => ({
+      messages: {
+        ...state.messages,
+        [chatId]: [...(state.messages[chatId] || []), optimisticMessage],
+      },
+      chats: state.chats.map((chat) =>
+        chat.id === chatId ? { ...chat, lastMessage: normalizedContent, lastMessageTime: 'Сейчас' } : chat,
+      ),
+    }));
+
+    const failTimeout = window.setTimeout(() => {
       set((state) => ({
-        chats: state.chats.map(chat => 
-          chat.id === chatId 
-            ? { ...chat, lastMessage: content, lastMessageTime: 'Сейчас' }
-            : chat
-        )
+        messages: {
+          ...state.messages,
+          [chatId]: (state.messages[chatId] || []).map((item) =>
+            item.id === clientMessageId ? { ...item, status: 'failed' } : item,
+          ),
+        },
       }));
+      pendingMessageTimeouts.delete(clientMessageId);
+    }, 12000);
 
-      resolve();
+    pendingMessageTimeouts.set(clientMessageId, failTimeout);
+
+    socket.emit('message:send', {
+      chatId,
+      content: normalizedContent,
+      createdAt: new Date(),
+      clientMessageId,
     });
   },
 
   loadChats: async () => {
     try {
-      const authStorage = localStorage.getItem('auth-storage');
-      if (!authStorage) return;
-      
-      const { state } = JSON.parse(authStorage);
-      const token = state?.token;
-      
-      const response = await fetch('http://localhost:3000/api/chats', {
+      const authState = readAuthState();
+      const token = authState?.token;
+      if (!token) return;
+
+      const response = await fetch('/api/chats', {
         headers: {
-          'Authorization': `Bearer ${token}`
-        }
+          Authorization: `Bearer ${token}`,
+        },
       });
-      
+
       if (!response.ok) {
-        console.error('Failed to load chats, status:', response.status);
         set({ chats: [] });
         return;
       }
-      
+
       const data = await response.json();
-      logDebug('Chats loaded:', data.chats);
       set({ chats: data.chats || [] });
     } catch (error) {
       console.error('Failed to load chats:', error);
@@ -250,30 +313,26 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   loadMessages: async (chatId: string) => {
     try {
-      const authStorage = localStorage.getItem('auth-storage');
-      if (!authStorage) return;
-      
-      const { state } = JSON.parse(authStorage);
-      const token = state?.token;
-      
-      const response = await fetch(`http://localhost:3000/api/chats/${chatId}/messages?limit=120`, {
+      const authState = readAuthState();
+      const token = authState?.token;
+      if (!token) return;
+
+      const response = await fetch(`/api/chats/${chatId}/messages?limit=120`, {
         headers: {
-          'Authorization': `Bearer ${token}`
-        }
+          Authorization: `Bearer ${token}`,
+        },
       });
-      
+
       if (!response.ok) {
-        console.error('Failed to load messages, status:', response.status);
         return;
       }
-      
+
       const data = await response.json();
-      logDebug('Messages loaded for chat', chatId, ':', data.messages.length, 'messages');
       set((state) => ({
         messages: {
           ...state.messages,
-          [chatId]: data.messages || []
-        }
+          [chatId]: data.messages || [],
+        },
       }));
     } catch (error) {
       console.error('Failed to load messages:', error);
@@ -282,27 +341,26 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   createChat: async (userId: string) => {
     try {
-      const authStorage = localStorage.getItem('auth-storage');
-      if (!authStorage) return;
-
-      const { state } = JSON.parse(authStorage);
-      const token = state?.token;
+      const authState = readAuthState();
+      const token = authState?.token;
       if (!token) return;
 
-      const response = await fetch('http://localhost:3000/api/chats', {
+      const response = await fetch('/api/chats', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
+          Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ userId })
+        body: JSON.stringify({ userId }),
       });
+
       if (!response.ok) {
         return;
       }
+
       const data = await response.json();
       set((state) => ({
-        chats: state.chats.some((chat) => chat.id === data.chat.id) ? state.chats : [...state.chats, data.chat]
+        chats: state.chats.some((chat) => chat.id === data.chat.id) ? state.chats : [...state.chats, data.chat],
       }));
     } catch (error) {
       console.error('Failed to create chat:', error);
@@ -311,15 +369,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   setTyping: (chatId: string, isTyping: boolean) => {
     const { socket } = get();
-    if (!socket) return;
-    
-    if (isTyping) {
-      socket.emit('user:typing', chatId);
-    }
+    if (!socket || !isTyping) return;
+    socket.emit('user:typing', chatId);
   },
 
   isUserOnline: (userId: string) => {
     const { onlineUsers } = get();
     return onlineUsers.has(userId);
-  }
+  },
 }));

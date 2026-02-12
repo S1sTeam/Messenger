@@ -34,7 +34,7 @@ export const ChatsPage = () => {
 
   const handleCreateChat = async (userId: string) => {
     try {
-      const response = await fetch('http://localhost:3000/api/chats', {
+      const response = await fetch('/api/chats', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
