@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import { createHash, randomBytes, randomInt } from 'crypto';
 import { prisma } from '../db.js';
 import {
+  getSmsProvider,
   isValidPhoneNumber,
   normalizePhoneNumber,
   sendVerificationCode,
@@ -49,10 +50,39 @@ authRouter.post('/send-code', async (req, res) => {
       });
     }
 
+    const smsProvider = getSmsProvider();
+    let resolvedTelegramChatId: string | undefined;
+
+    if (smsProvider === 'telegram') {
+      if (telegramChatId.length > 0) {
+        if (!/^-?\d+$/.test(telegramChatId)) {
+          return res.status(400).json({ error: 'Telegram chat id должен быть числом' });
+        }
+
+        resolvedTelegramChatId = telegramChatId;
+        await prisma.telegramBinding.upsert({
+          where: { phone: normalizedPhone },
+          update: { chatId: telegramChatId },
+          create: { phone: normalizedPhone, chatId: telegramChatId },
+        });
+      } else {
+        const existingBinding = await prisma.telegramBinding.findUnique({
+          where: { phone: normalizedPhone },
+        });
+        resolvedTelegramChatId = existingBinding?.chatId || undefined;
+      }
+
+      if (!resolvedTelegramChatId) {
+        return res.status(400).json({
+          error: 'Для Telegram-входа укажите Telegram chat id (один раз), затем код будет приходить автоматически.',
+        });
+      }
+    }
+
     const code = randomInt(0, 1_000_000).toString().padStart(6, '0');
     const expiresAt = new Date(Date.now() + OTP_TTL_MS);
     const provider = await sendVerificationCode(normalizedPhone, code, {
-      telegramChatId: telegramChatId || undefined,
+      telegramChatId: resolvedTelegramChatId,
     });
 
     await prisma.phoneVerification.upsert({

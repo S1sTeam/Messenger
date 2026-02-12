@@ -24,6 +24,8 @@ const resolveSmsProvider = (): SmsProvider => {
   return hasTwilioCreds ? 'twilio' : 'mock';
 };
 
+export const getSmsProvider = (): SmsProvider => resolveSmsProvider();
+
 export const normalizePhoneNumber = (value: string): string => {
   const raw = (value || '').trim();
   if (!raw) return '';
@@ -114,7 +116,7 @@ export const sendVerificationCode = async (
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         chat_id: chatId,
-        text: `Messenger code for ${phone}: ${code}\nValid for 5 minutes.`,
+        text: `Ваш код входа в Messenger: ${code}\nДействует 5 минут.\nНикому не сообщайте этот код.`,
       }),
     });
 

@@ -176,7 +176,7 @@ export const LoginPage = () => {
 
           <input
             type="text"
-            placeholder="Telegram chat id (опционально)"
+            placeholder="Telegram chat id (один раз для привязки)"
             value={telegramChatId}
             onChange={(e) => setTelegramChatId(e.target.value)}
             className={styles.input}
