@@ -3,10 +3,15 @@ import { prisma } from '../db.js';
 
 // РҐСЂР°РЅРёР»РёС‰Рµ РѕРЅР»Р°Р№РЅ РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№
 const onlineUsers = new Map<string, string>(); // userId -> socketId
+const debug = (...args: unknown[]) => {
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(...args);
+  }
+};
 
 export const setupSocketHandlers = (io: Server) => {
   io.on('connection', (socket) => {
-    console.log('вњ… User connected:', socket.id);
+    debug('вњ… User connected:', socket.id);
     const userId = socket.handshake.query.userId as string;
 
     // Join user's personal room
@@ -17,18 +22,18 @@ export const setupSocketHandlers = (io: Server) => {
       // РћС‚РїСЂР°РІР»СЏРµРј РЅРѕРІРѕРјСѓ РїРѕР»СЊР·РѕРІР°С‚РµР»СЋ СЃРїРёСЃРѕРє РІСЃРµС… РѕРЅР»Р°Р№РЅ РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№
       const onlineUserIds = Array.from(onlineUsers.keys());
       socket.emit('users:online', onlineUserIds);
-      console.log('рџ“‹ Sent online users list to new user:', onlineUserIds.length, 'users');
+      debug('рџ“‹ Sent online users list to new user:', onlineUserIds.length, 'users');
       
       // РЈРІРµРґРѕРјР»СЏРµРј Р’РЎР•РҐ (РІРєР»СЋС‡Р°СЏ РЅРѕРІРѕРіРѕ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ) Рѕ С‚РѕРј, С‡С‚Рѕ СЌС‚РѕС‚ РїРѕР»СЊР·РѕРІР°С‚РµР»СЊ РѕРЅР»Р°Р№РЅ
       io.emit('user:online', { userId });
-      console.log('рџ‘¤ User online:', userId);
+      debug('рџ‘¤ User online:', userId);
     }
 
     // РџРѕР»СѓС‡РёС‚СЊ СЃРїРёСЃРѕРє РѕРЅР»Р°Р№РЅ РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№ (РїРѕ Р·Р°РїСЂРѕСЃСѓ)
     socket.on('users:getOnline', () => {
       const onlineUserIds = Array.from(onlineUsers.keys());
       socket.emit('users:online', onlineUserIds);
-      console.log('рџ“‹ Sent online users list on request:', onlineUserIds.length, 'users');
+      debug('рџ“‹ Sent online users list on request:', onlineUserIds.length, 'users');
     });
 
     const resolvePrivateChatId = async (callerId: string, recipientId: string, preferredChatId?: string): Promise<string | null> => {
@@ -120,10 +125,14 @@ export const setupSocketHandlers = (io: Server) => {
         }
       });
 
-      await prisma.chat.update({
-        where: { id: targetChatId },
-        data: { updatedAt: new Date() }
-      });
+      void prisma.chat
+        .update({
+          where: { id: targetChatId },
+          data: { updatedAt: new Date() }
+        })
+        .catch((error) => {
+          console.error('Failed to bump chat updatedAt:', error);
+        });
 
       const fullMessage = {
         id: savedMessage.id,
@@ -143,7 +152,7 @@ export const setupSocketHandlers = (io: Server) => {
     };
 
     socket.on('message:send', async (message) => {
-      console.log('рџ“Ё Message sent by user:', userId, 'to chat:', message.chatId);
+      debug('рџ“Ё Message sent by user:', userId, 'to chat:', message.chatId);
       
       try {
         // РЎРѕС…СЂР°РЅСЏРµРј СЃРѕРѕР±С‰РµРЅРёРµ РІ Р‘Р”
@@ -166,9 +175,13 @@ export const setupSocketHandlers = (io: Server) => {
         });
 
         // РћР±РЅРѕРІР»СЏРµРј РІСЂРµРјСЏ РїРѕСЃР»РµРґРЅРµРіРѕ РѕР±РЅРѕРІР»РµРЅРёСЏ С‡Р°С‚Р°
-        await prisma.chat.update({
+        void prisma.chat
+        .update({
           where: { id: message.chatId },
           data: { updatedAt: new Date() }
+        })
+        .catch((error) => {
+          console.error('Failed to bump chat updatedAt:', error);
         });
 
         const fullMessage = {
@@ -188,7 +201,7 @@ export const setupSocketHandlers = (io: Server) => {
         // РћС‚РїСЂР°РІРёС‚РµР»СЋ РѕС‚РїСЂР°РІР»СЏРµРј РїРѕРґС‚РІРµСЂР¶РґРµРЅРёРµ СЃ С‚РµРј Р¶Рµ СЃРѕРѕР±С‰РµРЅРёРµРј
         socket.emit('message:sent', fullMessage);
         
-        console.log('вњ… Message saved and sent to chat:', message.chatId);
+        debug('вњ… Message saved and sent to chat:', message.chatId);
       } catch (error) {
         console.error('вќЊ Error saving message:', error);
         socket.emit('message:error', { error: 'РћС€РёР±РєР° РѕС‚РїСЂР°РІРєРё СЃРѕРѕР±С‰РµРЅРёСЏ' });
@@ -197,7 +210,7 @@ export const setupSocketHandlers = (io: Server) => {
 
     // РћС‚РјРµС‚РєР° СЃРѕРѕР±С‰РµРЅРёР№ РєР°Рє РїСЂРѕС‡РёС‚Р°РЅРЅС‹С…
     socket.on('messages:markRead', async ({ chatId, messageIds }) => {
-      console.log('вњ… Marking messages as read in chat:', chatId);
+      debug('вњ… Marking messages as read in chat:', chatId);
       
       try {
         await prisma.message.updateMany({
@@ -212,7 +225,7 @@ export const setupSocketHandlers = (io: Server) => {
 
         // РЈРІРµРґРѕРјР»СЏРµРј РѕС‚РїСЂР°РІРёС‚РµР»РµР№ С‡С‚Рѕ СЃРѕРѕР±С‰РµРЅРёСЏ РїСЂРѕС‡РёС‚Р°РЅС‹
         socket.to(chatId).emit('messages:read', { chatId, messageIds });
-        console.log('вњ… Messages marked as read');
+        debug('вњ… Messages marked as read');
       } catch (error) {
         console.error('вќЊ Error marking messages as read:', error);
       }
@@ -225,7 +238,7 @@ export const setupSocketHandlers = (io: Server) => {
       }
 
       const normalizedCallType = callType === 'video' ? 'video' : 'audio';
-      console.log('рџ“ћ Call initiated from', userId, 'to', recipientId);
+      debug('рџ“ћ Call initiated from', userId, 'to', recipientId);
       const recipientSocketId = onlineUsers.get(recipientId);
       
       if (recipientSocketId) {
@@ -237,7 +250,7 @@ export const setupSocketHandlers = (io: Server) => {
           callType: normalizedCallType,
           socketId: socket.id
         });
-        console.log('вњ… Call sent to recipient');
+        debug('вњ… Call sent to recipient');
       } else {
         // РџРѕР»СѓС‡Р°С‚РµР»СЊ РѕС„С„Р»Р°Р№РЅ - СЃРѕС…СЂР°РЅСЏРµРј РїСЂРѕРїСѓС‰РµРЅРЅС‹Р№ РІС‹Р·РѕРІ
         try {
@@ -249,7 +262,7 @@ export const setupSocketHandlers = (io: Server) => {
             text: normalizedCallType === 'video' ? 'Пропущенный видеозвонок' : 'Пропущенный аудиозвонок',
           });
 
-          console.log('рџ“ќ Missed call saved');
+          debug('рџ“ќ Missed call saved');
           socket.emit('call:offline', {
             reason: missedCallSavedToChat
               ? 'Пользователь не в сети. Пропущенный звонок добавлен в чат.'
@@ -262,7 +275,7 @@ export const setupSocketHandlers = (io: Server) => {
     });
     // WebRTC СЃРёРіРЅР°Р»РёРЅРі
     socket.on('webrtc:offer', ({ recipientId, offer, callType }) => {
-      console.log('рџ“Ў WebRTC offer from', userId, 'to', recipientId);
+      debug('рџ“Ў WebRTC offer from', userId, 'to', recipientId);
       io.to(`user:${recipientId}`).emit('webrtc:offer', {
         senderId: userId,
         offer,
@@ -271,7 +284,7 @@ export const setupSocketHandlers = (io: Server) => {
     });
 
     socket.on('webrtc:answer', ({ recipientId, answer }) => {
-      console.log('рџ“Ў WebRTC answer from', userId, 'to', recipientId);
+      debug('рџ“Ў WebRTC answer from', userId, 'to', recipientId);
       io.to(`user:${recipientId}`).emit('webrtc:answer', {
         senderId: userId,
         answer
@@ -279,7 +292,7 @@ export const setupSocketHandlers = (io: Server) => {
     });
 
     socket.on('webrtc:ice-candidate', ({ recipientId, candidate }) => {
-      console.log('рџ“Ў ICE candidate from', userId, 'to', recipientId);
+      debug('рџ“Ў ICE candidate from', userId, 'to', recipientId);
       io.to(`user:${recipientId}`).emit('webrtc:ice-candidate', {
         senderId: userId,
         candidate
@@ -287,12 +300,12 @@ export const setupSocketHandlers = (io: Server) => {
     });
 
     socket.on('call:answer', ({ callerId }) => {
-      console.log('вњ… Call answered by', userId);
+      debug('вњ… Call answered by', userId);
       io.to(`user:${callerId}`).emit('call:answered', { userId });
     });
 
     socket.on('call:reject', async ({ callerId, chatId, callType }) => {
-      console.log('вќЊ Call rejected by', userId);
+      debug('вќЊ Call rejected by', userId);
       io.to(`user:${callerId}`).emit('call:rejected', { userId });
 
       if (!userId || !callerId) {
@@ -334,30 +347,30 @@ export const setupSocketHandlers = (io: Server) => {
     });
 
     socket.on('call:end', ({ recipientId }) => {
-      console.log('рџ“ґ Call ended by', userId);
+      debug('рџ“ґ Call ended by', userId);
       if (recipientId) {
         io.to(`user:${recipientId}`).emit('call:ended', { userId });
       }
     });
 
     socket.on('user:typing', (chatId) => {
-      console.log('вЊЁпёЏ User typing in chat:', chatId);
+      debug('вЊЁпёЏ User typing in chat:', chatId);
       socket.to(chatId).emit('user:typing', chatId);
     });
 
     socket.on('chat:join', (chatId) => {
-      console.log('рџљЄ User joined chat:', chatId);
+      debug('рџљЄ User joined chat:', chatId);
       socket.join(chatId);
     });
 
     socket.on('disconnect', () => {
-      console.log('вќЊ User disconnected:', socket.id);
+      debug('вќЊ User disconnected:', socket.id);
       
       if (userId) {
         onlineUsers.delete(userId);
         // РЈРІРµРґРѕРјР»СЏРµРј РІСЃРµС… Рѕ С‚РѕРј, С‡С‚Рѕ РїРѕР»СЊР·РѕРІР°С‚РµР»СЊ РѕС„С„Р»Р°Р№РЅ
         io.emit('user:offline', { userId });
-        console.log('рџ‘¤ User offline:', userId);
+        debug('рџ‘¤ User offline:', userId);
       }
     });
   });

@@ -23,11 +23,12 @@ export const prepareDatabasePerformance = async () => {
 
   try {
     // SQLite runtime tuning for low-latency reads/writes on single-node VPS.
-    await prisma.$executeRawUnsafe('PRAGMA journal_mode = WAL;');
-    await prisma.$executeRawUnsafe('PRAGMA synchronous = NORMAL;');
-    await prisma.$executeRawUnsafe('PRAGMA temp_store = MEMORY;');
-    await prisma.$executeRawUnsafe('PRAGMA foreign_keys = ON;');
-    await prisma.$executeRawUnsafe('PRAGMA busy_timeout = 5000;');
+    await prisma.$queryRawUnsafe('PRAGMA journal_mode = WAL;');
+    await prisma.$queryRawUnsafe('PRAGMA synchronous = NORMAL;');
+    await prisma.$queryRawUnsafe('PRAGMA temp_store = MEMORY;');
+    await prisma.$queryRawUnsafe('PRAGMA foreign_keys = ON;');
+    await prisma.$queryRawUnsafe('PRAGMA busy_timeout = 5000;');
+    await prisma.$queryRawUnsafe('PRAGMA cache_size = -20000;');
 
     // Frequently used query paths.
     await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "idx_chat_participant_user_id" ON "ChatParticipant"("userId");');
