@@ -3,6 +3,7 @@ import { User, Check, CheckCheck, Paperclip } from 'lucide-react';
 import { useState } from 'react';
 import { ImageViewer } from './ImageViewer';
 import { chatIconById, getChatIconId } from '../utils/chatIcons';
+import { toBackendUrl } from '../config/network';
 import styles from './Message.module.css';
 
 interface MessageProps {
@@ -56,7 +57,7 @@ export const Message = ({ message, isOwn, index }: MessageProps) => {
 
   const handleImageClick = () => {
     if (mediaType === 'image') {
-      setViewerImageUrl(`http://localhost:3000${mediaUrl}`);
+      setViewerImageUrl(toBackendUrl(mediaUrl));
       setImageViewerOpen(true);
     }
   };
@@ -79,7 +80,7 @@ export const Message = ({ message, isOwn, index }: MessageProps) => {
           <div className={styles.media}>
             {mediaType === 'image' && (
               <img 
-                src={`http://localhost:3000${mediaUrl}`} 
+                src={toBackendUrl(mediaUrl)} 
                 alt="Изображение" 
                 className={styles.mediaImage}
                 loading="lazy"
@@ -89,14 +90,14 @@ export const Message = ({ message, isOwn, index }: MessageProps) => {
             )}
             {mediaType === 'video' && (
               <video 
-                src={`http://localhost:3000${mediaUrl}`} 
+                src={toBackendUrl(mediaUrl)} 
                 controls 
                 className={styles.mediaVideo}
               />
             )}
             {mediaType === 'file' && (
               <a 
-                href={`http://localhost:3000${mediaUrl}`} 
+                href={toBackendUrl(mediaUrl)} 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className={styles.mediaFile}

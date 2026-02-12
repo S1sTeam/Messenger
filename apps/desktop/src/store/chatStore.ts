@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { io, Socket } from 'socket.io-client';
+import { SOCKET_ORIGIN } from '../config/network';
 
 interface Message {
   id: string;
@@ -54,7 +55,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   initSocket: (token: string, userId: string) => {
     console.log('Initializing socket for user:', userId);
-    const socket = io('http://localhost:3000', {
+    const socket = io(SOCKET_ORIGIN, {
       auth: { token },
       query: { userId }
     });

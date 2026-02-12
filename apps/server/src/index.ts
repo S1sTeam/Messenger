@@ -37,7 +37,7 @@ const envCorsOrigins = (process.env.CORS_ORIGINS || process.env.ALLOWED_ORIGINS 
   .map((origin) => origin.trim())
   .filter(Boolean);
 
-const corsOrigins = envCorsOrigins.length > 0 ? envCorsOrigins : defaultCorsOrigins;
+const corsOrigins = Array.from(new Set([...defaultCorsOrigins, ...envCorsOrigins]));
 const corsMethods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'];
 
 const io = new Server(httpServer, {

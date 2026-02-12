@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { useFeedStore } from '../store/feedStore';
 import { useAuthStore } from '../store/authStore';
+import { toBackendUrl } from '../config/network';
 import styles from './FeedPage.module.css';
 
 const FILTER_TABS = [
@@ -124,10 +125,10 @@ export const FeedPage = () => {
   const resolveAvatarUrl = (avatar?: string | null) => {
     if (!avatar) return null;
     if (avatar.startsWith('http://') || avatar.startsWith('https://')) {
-      return avatar;
+      return toBackendUrl(avatar);
     }
     if (avatar.startsWith('/')) {
-      return `http://localhost:3000${avatar}`;
+      return toBackendUrl(avatar);
     }
     return null;
   };
@@ -660,9 +661,9 @@ export const FeedPage = () => {
                     {post.images.map((image, idx) => {
                       const isVideo = image.match(/\.(mp4|mov|avi|mkv)$/i);
                       return isVideo ? (
-                        <video key={idx} src={`http://localhost:3000${image}`} controls className={styles.postVideo} />
+                        <video key={idx} src={toBackendUrl(image)} controls className={styles.postVideo} />
                       ) : (
-                        <img key={idx} src={`http://localhost:3000${image}`} alt="Post media" className={styles.postImage} />
+                        <img key={idx} src={toBackendUrl(image)} alt="Post media" className={styles.postImage} />
                       );
                     })}
                   </div>

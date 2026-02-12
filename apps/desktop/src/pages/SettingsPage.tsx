@@ -4,6 +4,7 @@ import { User, Bell, Lock, Palette, Globe, Moon, Sun, Shield, Eye, EyeOff, Save,
 import { useAuthStore } from '../store/authStore';
 import { useNavigate } from 'react-router-dom';
 import { setThemeFromDarkMode } from '../utils/theme';
+import { toBackendUrl } from '../config/network';
 import styles from './SettingsPage.module.css';
 
 interface UserSettings {
@@ -404,7 +405,7 @@ export const SettingsPage = () => {
               <div className={styles.avatarSection}>
                 <div className={styles.avatarWrapper}>
                   {avatarUrl ? (
-                    <img src={`http://localhost:3000${avatarUrl}?v=${Date.now()}`} alt="Avatar" className={styles.avatarImage} />
+                    <img src={`${toBackendUrl(avatarUrl)}?v=${Date.now()}`} alt="Avatar" className={styles.avatarImage} />
                   ) : (
                     <div className={styles.avatarPlaceholder}>
                       <User size={48} />
