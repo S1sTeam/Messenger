@@ -42,6 +42,7 @@ const toAuthUser = (user: {
 authRouter.post('/send-code', async (req, res) => {
   try {
     const normalizedPhone = normalizePhoneNumber(req.body?.phone || '');
+    const telegramChatId = String(req.body?.telegramChatId || '').trim();
     if (!isValidPhoneNumber(normalizedPhone)) {
       return res.status(400).json({
         error: 'Введите номер в международном формате, например +79991234567',
@@ -50,7 +51,9 @@ authRouter.post('/send-code', async (req, res) => {
 
     const code = randomInt(0, 1_000_000).toString().padStart(6, '0');
     const expiresAt = new Date(Date.now() + OTP_TTL_MS);
-    const provider = await sendVerificationCode(normalizedPhone, code);
+    const provider = await sendVerificationCode(normalizedPhone, code, {
+      telegramChatId: telegramChatId || undefined,
+    });
 
     await prisma.phoneVerification.upsert({
       where: { phone: normalizedPhone },
@@ -69,7 +72,7 @@ authRouter.post('/send-code', async (req, res) => {
     const response: {
       message: string;
       expiresInSeconds: number;
-      provider: 'twilio' | 'textbelt' | 'mock';
+      provider: 'twilio' | 'textbelt' | 'telegram' | 'mock';
       debugCode?: string;
     } = {
       message: 'Код отправлен',

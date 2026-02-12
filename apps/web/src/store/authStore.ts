@@ -10,7 +10,7 @@ interface User {
 }
 
 interface SendCodeResult {
-  provider: 'twilio' | 'textbelt' | 'mock';
+  provider: 'twilio' | 'textbelt' | 'telegram' | 'mock';
   expiresInSeconds: number;
   debugCode?: string;
 }
@@ -25,7 +25,7 @@ interface AuthState {
   isAuthenticated: boolean;
   login: (phone: string, password: string) => Promise<void>;
   register: (phone: string, password: string, displayName: string) => Promise<void>;
-  sendPhoneCode: (phone: string) => Promise<SendCodeResult>;
+  sendPhoneCode: (phone: string, telegramChatId?: string) => Promise<SendCodeResult>;
   verifyPhoneCode: (phone: string, code: string, displayName?: string) => Promise<VerifyCodeResult>;
   logout: () => void;
   setUser: (user: User, token: string) => void;
@@ -71,8 +71,11 @@ export const useAuthStore = create<AuthState>()(
         });
       },
 
-      sendPhoneCode: async (phone: string) => {
-        const data = await postJson('http://localhost:3000/api/auth/send-code', { phone });
+      sendPhoneCode: async (phone: string, telegramChatId?: string) => {
+        const data = await postJson('http://localhost:3000/api/auth/send-code', {
+          phone,
+          telegramChatId,
+        });
         return {
           provider: data.provider,
           expiresInSeconds: data.expiresInSeconds,

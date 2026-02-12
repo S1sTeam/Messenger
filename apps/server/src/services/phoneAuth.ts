@@ -1,6 +1,9 @@
 import twilio, { Twilio } from 'twilio';
 
-export type SmsProvider = 'twilio' | 'textbelt' | 'mock';
+export type SmsProvider = 'twilio' | 'textbelt' | 'telegram' | 'mock';
+export interface SendCodeOptions {
+  telegramChatId?: string;
+}
 
 const PHONE_REGEX = /^\+[1-9]\d{10,14}$/;
 let twilioClient: Twilio | null = null;
@@ -9,7 +12,7 @@ const textbeltKey = process.env.TEXTBELT_KEY || 'textbelt';
 
 const resolveSmsProvider = (): SmsProvider => {
   const explicit = process.env.SMS_PROVIDER?.trim().toLowerCase();
-  if (explicit === 'twilio' || explicit === 'textbelt' || explicit === 'mock') {
+  if (explicit === 'twilio' || explicit === 'textbelt' || explicit === 'telegram' || explicit === 'mock') {
     return explicit;
   }
 
@@ -60,7 +63,11 @@ const getTwilioClient = (): Twilio => {
   return twilioClient;
 };
 
-export const sendVerificationCode = async (phone: string, code: string): Promise<SmsProvider> => {
+export const sendVerificationCode = async (
+  phone: string,
+  code: string,
+  options: SendCodeOptions = {}
+): Promise<SmsProvider> => {
   const provider = resolveSmsProvider();
 
   if (provider === 'mock') {
@@ -88,6 +95,36 @@ export const sendVerificationCode = async (phone: string, code: string): Promise
     }
 
     return 'textbelt';
+  }
+
+  if (provider === 'telegram') {
+    const botToken = process.env.TELEGRAM_BOT_TOKEN?.trim();
+    const chatId = options.telegramChatId?.trim() || process.env.TELEGRAM_CHAT_ID?.trim();
+
+    if (!botToken) {
+      throw new Error('TELEGRAM_BOT_TOKEN is missing');
+    }
+
+    if (!chatId) {
+      throw new Error('TELEGRAM_CHAT_ID is missing');
+    }
+
+    const telegramResponse = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: `Messenger code for ${phone}: ${code}\nValid for 5 minutes.`,
+      }),
+    });
+
+    const telegramPayload = await telegramResponse.json().catch(() => ({}));
+    if (!telegramResponse.ok || !telegramPayload.ok) {
+      const reason = telegramPayload.description || `Telegram HTTP ${telegramResponse.status}`;
+      throw new Error(`Telegram send failed: ${reason}`);
+    }
+
+    return 'telegram';
   }
 
   const fromNumber = process.env.TWILIO_FROM_NUMBER;

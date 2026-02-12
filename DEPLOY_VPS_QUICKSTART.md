@@ -39,6 +39,11 @@ TWILIO_FROM_NUMBER=+1xxxxxxxxxx
 # Free test option (limited):
 # SMS_PROVIDER=textbelt
 # TEXTBELT_KEY=textbelt
+
+# Telegram bot option:
+# SMS_PROVIDER=telegram
+# TELEGRAM_BOT_TOKEN=1234567890:AAxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+# TELEGRAM_CHAT_ID=123456789
 ```
 
 ## 4) Database

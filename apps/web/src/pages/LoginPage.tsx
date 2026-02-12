@@ -10,6 +10,7 @@ type AuthStep = 'phone' | 'verify';
 export const LoginPage = () => {
   const [step, setStep] = useState<AuthStep>('phone');
   const [phone, setPhone] = useState('');
+  const [telegramChatId, setTelegramChatId] = useState('');
   const [code, setCode] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [error, setError] = useState('');
@@ -62,9 +63,13 @@ export const LoginPage = () => {
 
     setLoading(true);
     try {
-      const result = await sendPhoneCode(phone);
+      const result = await sendPhoneCode(phone, telegramChatId.trim() || undefined);
       setStep('verify');
-      setHint('Код отправлен. Введите 6 цифр из SMS.');
+      setHint(
+        result.provider === 'telegram'
+          ? 'Код отправлен в Telegram. Проверьте чат с ботом.'
+          : 'Код отправлен. Введите 6 цифр из сообщения.'
+      );
       if (result.debugCode) {
         setDebugCode(result.debugCode);
       }
@@ -166,6 +171,15 @@ export const LoginPage = () => {
             onChange={handlePhoneChange}
             className={styles.input}
             required
+            disabled={step === 'verify'}
+          />
+
+          <input
+            type="text"
+            placeholder="Telegram chat id (опционально)"
+            value={telegramChatId}
+            onChange={(e) => setTelegramChatId(e.target.value)}
+            className={styles.input}
             disabled={step === 'verify'}
           />
 
