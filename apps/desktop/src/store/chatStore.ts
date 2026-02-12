@@ -9,6 +9,12 @@ const logDebug = (...args: unknown[]) => {
 };
 
 const pendingMessageTimeouts = new Map<string, number>();
+const typingLastSentAt = new Map<string, number>();
+
+const TYPING_THROTTLE_MS = 1200;
+const PRESENCE_PING_MS = 15000;
+
+let presencePingTimer: number | null = null;
 
 const makeClientMessageId = () => `tmp-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 
@@ -19,6 +25,13 @@ const readAuthState = () => {
     return JSON.parse(raw)?.state || null;
   } catch {
     return null;
+  }
+};
+
+const clearPresencePingTimer = () => {
+  if (presencePingTimer !== null) {
+    window.clearInterval(presencePingTimer);
+    presencePingTimer = null;
   }
 };
 
@@ -58,6 +71,7 @@ interface ChatState {
   currentChat: string | null;
   isTyping: Record<string, boolean>;
   onlineUsers: Set<string>;
+  lastSeen: Record<string, string>;
   initSocket: (token: string, userId: string) => void;
   disconnectSocket: () => void;
   setCurrentChat: (chatId: string | null) => void;
@@ -67,6 +81,7 @@ interface ChatState {
   createChat: (userId: string) => Promise<void>;
   setTyping: (chatId: string, isTyping: boolean) => void;
   isUserOnline: (userId: string) => boolean;
+  getUserLastSeen: (userId: string) => string | undefined;
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
@@ -77,16 +92,22 @@ export const useChatStore = create<ChatState>((set, get) => ({
   currentChat: null,
   isTyping: {},
   onlineUsers: new Set<string>(),
+  lastSeen: {},
 
   initSocket: (token: string, userId: string) => {
     const { socket: existingSocket, socketUserId } = get();
 
     if (existingSocket && socketUserId === userId) {
+      existingSocket.auth = { token };
+
       if (!existingSocket.connected && !existingSocket.active) {
         existingSocket.connect();
       }
+
       return;
     }
+
+    clearPresencePingTimer();
 
     if (existingSocket) {
       existingSocket.removeAllListeners();
@@ -105,6 +126,19 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
     socket.on('connect', () => {
       logDebug('Socket connected:', socket.id);
+      socket.emit('users:getOnline');
+      socket.emit('presence:ping');
+
+      clearPresencePingTimer();
+      presencePingTimer = window.setInterval(() => {
+        if (socket.connected) {
+          socket.emit('presence:ping');
+        }
+      }, PRESENCE_PING_MS);
+    });
+
+    socket.on('disconnect', () => {
+      clearPresencePingTimer();
     });
 
     socket.on('connect_error', (error) => {
@@ -181,19 +215,51 @@ export const useChatStore = create<ChatState>((set, get) => ({
       }, 3000);
     });
 
+    socket.on('users:lastSeen', (payload: Record<string, string>) => {
+      const normalizedLastSeen: Record<string, string> = {};
+      for (const [targetUserId, lastSeenAt] of Object.entries(payload || {})) {
+        if (typeof targetUserId === 'string' && typeof lastSeenAt === 'string' && targetUserId.length > 0 && lastSeenAt.length > 0) {
+          normalizedLastSeen[targetUserId] = lastSeenAt;
+        }
+      }
+
+      set((state) => ({
+        lastSeen: {
+          ...state.lastSeen,
+          ...normalizedLastSeen,
+        },
+      }));
+    });
+
     socket.on('user:online', ({ userId: onlineUserId }: { userId: string }) => {
       set((state) => {
         const newOnlineUsers = new Set(state.onlineUsers);
         newOnlineUsers.add(onlineUserId);
-        return { onlineUsers: newOnlineUsers };
+
+        const { [onlineUserId]: _unused, ...restLastSeen } = state.lastSeen;
+
+        return {
+          onlineUsers: newOnlineUsers,
+          lastSeen: restLastSeen,
+        };
       });
     });
 
-    socket.on('user:offline', ({ userId: offlineUserId }: { userId: string }) => {
+    socket.on('user:offline', ({ userId: offlineUserId, lastSeenAt }: { userId: string; lastSeenAt?: string }) => {
       set((state) => {
         const newOnlineUsers = new Set(state.onlineUsers);
         newOnlineUsers.delete(offlineUserId);
-        return { onlineUsers: newOnlineUsers };
+
+        return {
+          onlineUsers: newOnlineUsers,
+          lastSeen:
+            typeof lastSeenAt === 'string' && lastSeenAt.length > 0
+              ? {
+                  ...state.lastSeen,
+                  [offlineUserId]: lastSeenAt,
+                }
+              : state.lastSeen,
+        };
       });
     });
 
@@ -206,6 +272,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   disconnectSocket: () => {
     const { socket } = get();
+
+    clearPresencePingTimer();
+    typingLastSentAt.clear();
+
     if (socket) {
       socket.removeAllListeners();
       socket.disconnect();
@@ -216,7 +286,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
     pendingMessageTimeouts.clear();
 
-    set({ socket: null, socketUserId: null, onlineUsers: new Set<string>() });
+    set({ socket: null, socketUserId: null, onlineUsers: new Set<string>(), lastSeen: {} });
   },
 
   setCurrentChat: (chatId: string | null) => {
@@ -370,11 +440,24 @@ export const useChatStore = create<ChatState>((set, get) => ({
   setTyping: (chatId: string, isTyping: boolean) => {
     const { socket } = get();
     if (!socket || !isTyping) return;
+
+    const now = Date.now();
+    const lastSentAt = typingLastSentAt.get(chatId) ?? 0;
+    if (now - lastSentAt < TYPING_THROTTLE_MS) {
+      return;
+    }
+
+    typingLastSentAt.set(chatId, now);
     socket.emit('user:typing', chatId);
   },
 
   isUserOnline: (userId: string) => {
     const { onlineUsers } = get();
     return onlineUsers.has(userId);
+  },
+
+  getUserLastSeen: (userId: string) => {
+    const { lastSeen } = get();
+    return lastSeen[userId];
   },
 }));

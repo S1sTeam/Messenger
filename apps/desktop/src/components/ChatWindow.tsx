@@ -1,5 +1,6 @@
-﻿import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
+import { format, isToday } from 'date-fns';
 import { MessageSquare, Paperclip, Phone, Send, Smile, Sticker, User, Video } from 'lucide-react';
 import { Message } from './Message';
 import { ChatMenu } from './ChatMenu';
@@ -34,18 +35,50 @@ export const ChatWindow = ({ chatId, onChatDeleted }: ChatWindowProps) => {
   const setTyping = useChatStore((state) => state.setTyping);
   const isTyping = useChatStore((state) => state.isTyping[chatId]);
   const isUserOnline = useChatStore((state) => state.isUserOnline);
+  const getUserLastSeen = useChatStore((state) => state.getUserLastSeen);
   const socket = useChatStore((state) => state.socket);
   const user = useAuthStore((state) => state.user);
 
   const chat = chats.find((c) => c.id === chatId);
   const otherUserId = chat?.participants.find((id) => id !== user?.id) || null;
   const isRecipientOnline = otherUserId ? isUserOnline(otherUserId) : false;
+  const recipientLastSeen = otherUserId ? getUserLastSeen(otherUserId) : undefined;
+
+  const getPresenceText = () => {
+    if (isTyping) {
+      return 'печатает...';
+    }
+
+    if (isRecipientOnline) {
+      return 'онлайн';
+    }
+
+    if (!recipientLastSeen) {
+      return 'не в сети';
+    }
+
+    const seenDate = new Date(recipientLastSeen);
+    if (Number.isNaN(seenDate.getTime())) {
+      return 'не в сети';
+    }
+
+    const diffMs = Date.now() - seenDate.getTime();
+    if (diffMs <= 5 * 60 * 1000) {
+      return 'был(а) недавно';
+    }
+
+    if (isToday(seenDate)) {
+      return `был(а) в сети в ${format(seenDate, 'HH:mm')}`;
+    }
+
+    return `был(а) в сети ${format(seenDate, 'dd.MM HH:mm')}`;
+  };
 
   useEffect(() => {
     if (!chatId) return;
 
     markedAsReadRef.current.clear();
-    loadMessages(chatId);
+    void loadMessages(chatId);
   }, [chatId, loadMessages]);
 
   useEffect(() => {
@@ -104,15 +137,13 @@ export const ChatWindow = ({ chatId, onChatDeleted }: ChatWindowProps) => {
   };
 
   const handleTyping = () => {
-    if (setTyping) {
-      setTyping(chatId, true);
-    }
+    setTyping(chatId, true);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSend(e);
+      void handleSend(e);
     }
   };
 
@@ -136,7 +167,7 @@ export const ChatWindow = ({ chatId, onChatDeleted }: ChatWindowProps) => {
       const { state } = JSON.parse(authStorage);
       const token = state?.token;
 
-      const response = await fetch('http://localhost:3000/api/upload', {
+      const response = await fetch('/api/upload', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -199,7 +230,7 @@ export const ChatWindow = ({ chatId, onChatDeleted }: ChatWindowProps) => {
           <div>
             <h3 className={styles.name}>{chat?.name || 'Чат'}</h3>
             <span className={`${styles.status} ${!isRecipientOnline && !isTyping ? styles.offline : ''}`}>
-              {isTyping ? 'печатает...' : isRecipientOnline ? 'онлайн' : 'не в сети'}
+              {getPresenceText()}
             </span>
           </div>
         </div>

@@ -47,6 +47,9 @@ const io = new Server(httpServer, {
     credentials: true,
     methods: corsMethods,
   },
+  transports: ['websocket', 'polling'],
+  pingInterval: 10000,
+  pingTimeout: 5000,
 });
 
 app.use(

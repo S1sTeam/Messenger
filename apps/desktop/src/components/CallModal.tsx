@@ -58,21 +58,21 @@ export const CallModal = ({
   const callerStartedRef = useRef(false);
 
   const cameraVideoConstraints: MediaTrackConstraints = {
-    width: { ideal: 1920, max: 1920 },
-    height: { ideal: 1080, max: 1080 },
-    frameRate: { ideal: 60, max: 60 },
-  };
-
-  const fallbackCameraVideoConstraints: MediaTrackConstraints = {
     width: { ideal: 1280, max: 1280 },
     height: { ideal: 720, max: 720 },
     frameRate: { ideal: 30, max: 30 },
   };
 
+  const fallbackCameraVideoConstraints: MediaTrackConstraints = {
+    width: { ideal: 960, max: 960 },
+    height: { ideal: 540, max: 540 },
+    frameRate: { ideal: 24, max: 24 },
+  };
+
   const screenVideoConstraints: MediaTrackConstraints = {
     width: { ideal: 1920, max: 1920 },
     height: { ideal: 1080, max: 1080 },
-    frameRate: { ideal: 60, max: 60 },
+    frameRate: { ideal: 30, max: 30 },
   };
 
   const rtcConfiguration: RTCConfiguration = {
@@ -218,8 +218,8 @@ export const CallModal = ({
       parameters.degradationPreference = mode === 'screen' ? 'maintain-resolution' : 'balanced';
       parameters.encodings = baseEncoding.map((encoding) => ({
         ...encoding,
-        maxFramerate: 60,
-        maxBitrate: mode === 'screen' ? 8_000_000 : 4_000_000,
+        maxFramerate: mode === 'screen' ? 30 : 24,
+        maxBitrate: mode === 'screen' ? 3_500_000 : 1_500_000,
       }));
 
       await sender.setParameters(parameters);
@@ -531,7 +531,7 @@ export const CallModal = ({
   useEffect(() => {
     let interval: number | undefined;
 
-    if (callStatus === 'connected') {
+    if (callStatus === 'connected' && callType === 'audio') {
       interval = window.setInterval(() => {
         setCallDuration((prev) => prev + 1);
         setSignalStrength(Math.floor(Math.random() * 2) + 4);
@@ -543,7 +543,7 @@ export const CallModal = ({
         window.clearInterval(interval);
       }
     };
-  }, [callStatus]);
+  }, [callStatus, callType]);
 
   const toggleMute = () => {
     const pc = peerConnectionRef.current;

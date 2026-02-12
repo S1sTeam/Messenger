@@ -2,6 +2,8 @@ import { Server } from 'socket.io';
 import { prisma } from '../db.js';
 
 const onlineUsers = new Map<string, Set<string>>();
+const lastSeenByUser = new Map<string, string>();
+const lastActivityByUser = new Map<string, number>();
 
 const debug = (...args: unknown[]) => {
   if (process.env.SOCKET_DEBUG === 'true') {
@@ -19,6 +21,14 @@ const normalizeString = (value: unknown): string | undefined => {
 };
 
 const getOnlineUserIds = () => Array.from(onlineUsers.keys());
+
+const getLastSeenSnapshot = () => {
+  const snapshot: Record<string, string> = {};
+  for (const [userId, lastSeenAt] of lastSeenByUser.entries()) {
+    snapshot[userId] = lastSeenAt;
+  }
+  return snapshot;
+};
 
 const addOnlineSocket = (userId: string, socketId: string) => {
   const socketIds = onlineUsers.get(userId) ?? new Set<string>();
@@ -116,6 +126,18 @@ interface CallAnswerPayload {
 export const setupSocketHandlers = (io: Server) => {
   io.on('connection', (socket) => {
     const userId = normalizeString(socket.handshake.query.userId);
+
+    const touchActivity = () => {
+      if (!userId) {
+        return;
+      }
+      lastActivityByUser.set(userId, Date.now());
+    };
+
+    const emitPresenceSnapshot = () => {
+      socket.emit('users:online', getOnlineUserIds());
+      socket.emit('users:lastSeen', getLastSeenSnapshot());
+    };
 
     debug('User connected', { socketId: socket.id, userId });
 
@@ -236,15 +258,21 @@ export const setupSocketHandlers = (io: Server) => {
       socket.join(`user:${userId}`);
 
       const becameOnline = addOnlineSocket(userId, socket.id);
-      socket.emit('users:online', getOnlineUserIds());
+      lastSeenByUser.delete(userId);
+      touchActivity();
+      emitPresenceSnapshot();
 
       if (becameOnline) {
-        io.emit('user:online', { userId });
+        io.emit('user:online', { userId, onlineAt: new Date().toISOString() });
       }
     }
 
+    socket.on('presence:ping', () => {
+      touchActivity();
+    });
+
     socket.on('users:getOnline', () => {
-      socket.emit('users:online', getOnlineUserIds());
+      emitPresenceSnapshot();
     });
 
     socket.on('message:send', async (payload: MessageSendPayload) => {
@@ -253,6 +281,8 @@ export const setupSocketHandlers = (io: Server) => {
           socket.emit('message:error', { error: 'Пользователь не авторизован' });
           return;
         }
+
+        touchActivity();
 
         const chatId = normalizeString(payload.chatId);
         const content = normalizeString(payload.content);
@@ -265,6 +295,19 @@ export const setupSocketHandlers = (io: Server) => {
 
         if (!content) {
           socket.emit('message:error', { error: 'Пустое сообщение' });
+          return;
+        }
+
+        const membership = await prisma.chatParticipant.findFirst({
+          where: {
+            chatId,
+            userId,
+          },
+          select: { id: true },
+        });
+
+        if (!membership) {
+          socket.emit('message:error', { error: 'Нет доступа к этому чату' });
           return;
         }
 
@@ -328,6 +371,12 @@ export const setupSocketHandlers = (io: Server) => {
 
     socket.on('messages:markRead', async (payload: MarkReadPayload) => {
       try {
+        if (!userId) {
+          return;
+        }
+
+        touchActivity();
+
         const chatId = normalizeString(payload.chatId);
         const messageIds = Array.isArray(payload.messageIds) ? payload.messageIds.filter((id) => typeof id === 'string') : [];
 
@@ -355,6 +404,8 @@ export const setupSocketHandlers = (io: Server) => {
       if (!userId) {
         return;
       }
+
+      touchActivity();
 
       const recipientId = normalizeString(payload.recipientId);
       if (!recipientId) {
@@ -394,6 +445,8 @@ export const setupSocketHandlers = (io: Server) => {
     });
 
     socket.on('webrtc:offer', (payload: WebRtcOfferPayload) => {
+      touchActivity();
+
       const recipientId = normalizeString(payload.recipientId);
       if (!recipientId) {
         return;
@@ -407,6 +460,8 @@ export const setupSocketHandlers = (io: Server) => {
     });
 
     socket.on('webrtc:answer', (payload: WebRtcAnswerPayload) => {
+      touchActivity();
+
       const recipientId = normalizeString(payload.recipientId);
       if (!recipientId) {
         return;
@@ -419,6 +474,8 @@ export const setupSocketHandlers = (io: Server) => {
     });
 
     socket.on('webrtc:ice-candidate', (payload: WebRtcCandidatePayload) => {
+      touchActivity();
+
       const recipientId = normalizeString(payload.recipientId);
       if (!recipientId) {
         return;
@@ -431,14 +488,19 @@ export const setupSocketHandlers = (io: Server) => {
     });
 
     socket.on('call:answer', (payload: CallAnswerPayload) => {
+      touchActivity();
+
       const callerId = normalizeString(payload.callerId);
       if (!callerId) {
         return;
       }
+
       io.to(`user:${callerId}`).emit('call:answered', { userId });
     });
 
     socket.on('call:reject', async (payload: CallRejectPayload) => {
+      touchActivity();
+
       const callerId = normalizeString(payload.callerId);
       if (!callerId) {
         return;
@@ -465,6 +527,8 @@ export const setupSocketHandlers = (io: Server) => {
     });
 
     socket.on('call:missed', async (payload: CallMissedPayload) => {
+      touchActivity();
+
       if (!userId) {
         return;
       }
@@ -490,17 +554,23 @@ export const setupSocketHandlers = (io: Server) => {
     });
 
     socket.on('call:end', (payload: CallEndPayload) => {
+      touchActivity();
+
       const recipientId = normalizeString(payload.recipientId);
       if (!recipientId) {
         return;
       }
+
       io.to(`user:${recipientId}`).emit('call:ended', { userId });
     });
 
     socket.on('user:typing', (chatId: string) => {
+      touchActivity();
+
       if (typeof chatId !== 'string' || !chatId) {
         return;
       }
+
       socket.to(chatId).emit('user:typing', chatId);
     });
 
@@ -508,6 +578,7 @@ export const setupSocketHandlers = (io: Server) => {
       if (typeof chatId !== 'string' || !chatId) {
         return;
       }
+
       socket.join(chatId);
     });
 
@@ -517,11 +588,16 @@ export const setupSocketHandlers = (io: Server) => {
       }
 
       const becameOffline = removeOnlineSocket(userId, socket.id);
-      if (becameOffline) {
-        io.emit('user:offline', { userId });
+      if (!becameOffline) {
+        return;
       }
 
-      debug('User disconnected', { socketId: socket.id, userId, becameOffline });
+      const lastSeenAt = new Date(lastActivityByUser.get(userId) ?? Date.now()).toISOString();
+      lastSeenByUser.set(userId, lastSeenAt);
+      lastActivityByUser.delete(userId);
+
+      io.emit('user:offline', { userId, lastSeenAt });
+      debug('User disconnected', { socketId: socket.id, userId, lastSeenAt });
     });
   });
 };
