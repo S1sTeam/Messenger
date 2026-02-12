@@ -35,6 +35,10 @@ SMS_PROVIDER=twilio
 TWILIO_ACCOUNT_SID=ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 TWILIO_AUTH_TOKEN=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 TWILIO_FROM_NUMBER=+1xxxxxxxxxx
+
+# Free test option (limited):
+# SMS_PROVIDER=textbelt
+# TEXTBELT_KEY=textbelt
 ```
 
 ## 4) Database

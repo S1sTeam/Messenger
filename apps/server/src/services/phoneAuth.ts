@@ -1,13 +1,15 @@
 import twilio, { Twilio } from 'twilio';
 
-export type SmsProvider = 'twilio' | 'mock';
+export type SmsProvider = 'twilio' | 'textbelt' | 'mock';
 
 const PHONE_REGEX = /^\+[1-9]\d{10,14}$/;
 let twilioClient: Twilio | null = null;
+const textbeltEndpoint = process.env.TEXTBELT_ENDPOINT || 'https://textbelt.com/text';
+const textbeltKey = process.env.TEXTBELT_KEY || 'textbelt';
 
 const resolveSmsProvider = (): SmsProvider => {
   const explicit = process.env.SMS_PROVIDER?.trim().toLowerCase();
-  if (explicit === 'twilio' || explicit === 'mock') {
+  if (explicit === 'twilio' || explicit === 'textbelt' || explicit === 'mock') {
     return explicit;
   }
 
@@ -64,6 +66,28 @@ export const sendVerificationCode = async (phone: string, code: string): Promise
   if (provider === 'mock') {
     console.log(`[OTP MOCK] Verification code for ${phone}: ${code}`);
     return 'mock';
+  }
+
+  if (provider === 'textbelt') {
+    const body = new URLSearchParams({
+      phone,
+      message: `Messenger code: ${code}. Expires in 5 minutes.`,
+      key: textbeltKey,
+    });
+
+    const response = await fetch(textbeltEndpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+    });
+
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || !payload.success) {
+      const reason = payload.error || `Textbelt HTTP ${response.status}`;
+      throw new Error(`Textbelt send failed: ${reason}`);
+    }
+
+    return 'textbelt';
   }
 
   const fromNumber = process.env.TWILIO_FROM_NUMBER;

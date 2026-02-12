@@ -10,7 +10,7 @@ interface User {
 }
 
 interface SendCodeResult {
-  provider: 'twilio' | 'mock';
+  provider: 'twilio' | 'textbelt' | 'mock';
   expiresInSeconds: number;
   debugCode?: string;
 }

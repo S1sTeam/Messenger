@@ -69,7 +69,7 @@ authRouter.post('/send-code', async (req, res) => {
     const response: {
       message: string;
       expiresInSeconds: number;
-      provider: 'twilio' | 'mock';
+      provider: 'twilio' | 'textbelt' | 'mock';
       debugCode?: string;
     } = {
       message: 'Код отправлен',
