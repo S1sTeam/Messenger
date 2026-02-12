@@ -1,0 +1,77 @@
+.container {
+  position: relative;
+}
+
+.trigger {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.trigger:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  box-shadow: none;
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 140;
+}
+
+.menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 210px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow-md);
+  z-index: 150;
+  overflow: hidden;
+  padding: 6px;
+}
+
+.menuItem {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+  font-size: 13px;
+  border-radius: 8px;
+  transition: background-color 0.18s ease;
+  text-align: left;
+}
+
+.menuItem:hover {
+  background: var(--bg-hover);
+  box-shadow: none;
+}
+
+.menuItem.danger {
+  color: var(--error);
+}
+
+.menuItem svg {
+  color: currentColor;
+  stroke: currentColor;
+  fill: none;
+  flex-shrink: 0;
+}
+
+
+

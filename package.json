@@ -1,0 +1,16 @@
+{
+  "name": "messenger-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "check-db": "node check-db.js",
+    "dev:server": "npm run dev --workspace=apps/server",
+    "dev:web": "npm run dev --workspace=apps/web",
+    "dev:mobile": "npm run start --workspace=apps/mobile",
+    "dev:desktop": "npm run tauri dev --workspace=apps/desktop"
+  }
+}

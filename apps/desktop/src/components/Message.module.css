@@ -1,0 +1,142 @@
+.wrapper {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+  max-width: min(72%, 620px);
+}
+
+.wrapper.mine {
+  margin-left: auto;
+  flex-direction: row-reverse;
+}
+
+.avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--avatar-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--white);
+  flex-shrink: 0;
+}
+
+.bubble {
+  background: var(--bg-surface);
+  border: 1px solid var(--bubble-border);
+  border-radius: 14px 14px 14px 6px;
+  padding: 9px 12px;
+  position: relative;
+  box-shadow: 0 2px 4px rgba(21, 45, 73, 0.06);
+}
+
+.bubble.mineBubble {
+  background: var(--bubble-own-bg);
+  border-color: var(--bubble-own-border);
+  color: var(--bubble-own-text);
+  border-radius: 14px 14px 6px 14px;
+}
+
+.text {
+  font-size: 14px;
+  line-height: 1.45;
+  margin: 0 0 4px;
+  word-wrap: break-word;
+}
+
+.iconMessage {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4px;
+  color: var(--icon-secondary);
+}
+
+.mineBubble .iconMessage {
+  color: var(--bubble-own-text);
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  justify-content: flex-end;
+}
+
+.time {
+  font-size: 11px;
+  color: var(--message-meta);
+}
+
+.readStatus {
+  display: inline-flex;
+  align-items: center;
+  color: var(--message-meta-strong);
+  transition: color 0.2s;
+}
+
+.readStatus.read {
+  color: var(--primary);
+}
+
+.readStatus svg {
+  display: block;
+}
+
+.media {
+  margin-bottom: 4px;
+}
+
+.mediaImage {
+  max-width: 300px;
+  max-height: 380px;
+  width: 100%;
+  height: auto;
+  border-radius: 10px;
+  display: block;
+  object-fit: cover;
+}
+
+.mediaVideo {
+  max-width: 380px;
+  max-height: 280px;
+  width: 100%;
+  border-radius: 10px;
+  display: block;
+}
+
+.mediaFile {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  background: var(--surface-soft-strong);
+  border: 1px solid var(--file-border);
+  border-radius: 8px;
+  color: inherit;
+  text-decoration: none;
+  font-size: 13px;
+}
+
+.mediaFile:hover {
+  background: var(--surface-soft-hover3);
+}
+
+.mineBubble .mediaFile {
+  background: var(--file-own-bg);
+  border-color: var(--file-own-border);
+}
+
+.mineBubble .mediaFile:hover {
+  background: var(--file-own-hover);
+}
+
+@media (max-width: 900px) {
+  .wrapper {
+    max-width: 92%;
+  }
+}
+
+
+

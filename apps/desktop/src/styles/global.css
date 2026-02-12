@@ -1,0 +1,377 @@
+@import url('https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap');
+
+:root {
+  color-scheme: light;
+
+  --white: #ffffff;
+
+  --bg-canvas: #dfe6ee;
+  --bg-page: #e8edf3;
+  --bg-surface: #ffffff;
+  --bg-subtle: #f4f7fa;
+  --bg-hover: #edf2f8;
+  --bg-selected: #dff0ff;
+
+  --text-primary: #1f2d3d;
+  --text-secondary: #6f8194;
+  --text-tertiary: #94a4b5;
+
+  --primary: #3390ec;
+  --primary-hover: #2787e7;
+  --primary-soft: rgba(51, 144, 236, 0.16);
+
+  --success: #35c759;
+  --warning: #f5a623;
+  --error: #eb5757;
+
+  --border: #d7e1eb;
+  --border-strong: #c6d3e0;
+
+  --shadow-sm: 0 2px 6px rgba(17, 43, 73, 0.08);
+  --shadow-md: 0 12px 32px rgba(21, 45, 73, 0.14);
+
+  --page-bg: #eef2f6;
+  --surface-muted: #f7f9fc;
+  --surface-muted-2: #f8fbfe;
+  --surface-muted-3: #f8fafc;
+  --surface-muted-4: #eef3f7;
+  --surface-muted-5: #eef3f8;
+  --surface-input: #f6f9fc;
+
+  --surface-soft: #edf3f9;
+  --surface-soft-alt: #eaf1f8;
+  --surface-soft-hover: #e2ebf5;
+  --surface-soft-hover2: #e3ecf5;
+  --surface-soft-hover3: #e7eef5;
+  --surface-soft-hover4: #e4edf6;
+  --surface-soft-strong: #f0f5fa;
+  --surface-soft-toned: #e9f0f7;
+  --surface-soft-toned-hover: #dde8f2;
+  --surface-soft-action: #eaf1f7;
+  --surface-soft-action-hover: #dfe8f0;
+  --surface-current-account: #f2f7fc;
+  --surface-blue-soft: #eaf2fb;
+  --surface-chip: #eef4fa;
+
+  --accent-border-soft: #bfdcf9;
+  --accent-border-hover: #a9d1f8;
+  --accent-bg-soft: #d5e9fc;
+  --border-accent: #c8def4;
+  --border-accent-strong: #b9d8f6;
+  --border-divider: #dde6ef;
+  --border-divider-strong: #e3eaf1;
+  --border-dashed: #cfdae5;
+  --border-dashed-chat: #cfdae6;
+  --border-muted: #d8e4ef;
+  --border-muted-blue: #d4e4f4;
+  --border-muted-blue-2: #cfe0ef;
+
+  --focus-border: #a8cef3;
+  --focus-border-strong: #96c6f4;
+  --toggle-off: #c3d2e0;
+
+  --chat-shell-bg: #e7edf4;
+  --chat-wallpaper-bg: #dfe7ef;
+
+  --bubble-border: #d4deea;
+  --bubble-own-bg: #dff1ff;
+  --bubble-own-border: #beddf9;
+  --bubble-own-text: #163551;
+
+  --file-border: #d5e0ea;
+  --file-own-bg: #edf6ff;
+  --file-own-border: #cde2f6;
+  --file-own-hover: #e3f1ff;
+
+  --avatar-muted: #b3c7dc;
+  --avatar-gradient-start: #7bb1e7;
+  --avatar-gradient-end: #5d9cdb;
+  --brand-gradient-start: #4da0f2;
+  --brand-gradient-end: #2f8eea;
+  --brand-gradient-alt-start: #3f97ef;
+  --brand-gradient-alt-end: #2f8cea;
+
+  --accent-text-strong: #216cb4;
+  --accent-text-stronger: #1f73c6;
+
+  --icon-muted: #a9b8c7;
+  --icon-secondary: #6b8aa8;
+  --message-meta: #88a0b7;
+  --message-meta-strong: #9ab0c3;
+
+  --like-color: #e25d67;
+  --repost-color: #35b976;
+
+  --danger-bg-soft: #fff0f0;
+  --danger-border-soft: #ffd0d0;
+  --danger-text-soft: #c95050;
+  --danger-bg-muted: #ffecec;
+  --danger-bg-subtle: #ffeceb;
+  --danger-border-muted: #f5c5c5;
+  --danger-text-muted: #c25656;
+  --danger-button: #e95d5d;
+  --danger-button-hover: #dd4f4f;
+
+  --success-bg: #e8faf0;
+  --success-border: #bde8cd;
+  --success-text: #2a9360;
+
+  --login-grad-1: #dce6f0;
+  --login-grad-2: #edf2f7;
+  --login-grad-3: #dfe9f4;
+
+  --selection-text: #0f2238;
+  --scrollbar: #c7d3df;
+  --scrollbar-hover: #b5c3d1;
+  --input-focus-border: #87bdf4;
+  --input-focus-bg: #f8fbff;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --bg-canvas: #0d141d;
+  --bg-page: #111b27;
+  --bg-surface: #192633;
+  --bg-subtle: #223344;
+  --bg-hover: #273a4d;
+  --bg-selected: #27435b;
+
+  --text-primary: #e3ebf4;
+  --text-secondary: #9cb2c7;
+  --text-tertiary: #7f95aa;
+
+  --primary: #5aa8ff;
+  --primary-hover: #6ab2ff;
+  --primary-soft: rgba(90, 168, 255, 0.24);
+
+  --success: #63d69a;
+  --warning: #f3bf62;
+  --error: #ef7b7b;
+
+  --border: #304356;
+  --border-strong: #3d556d;
+
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.28);
+  --shadow-md: 0 16px 36px rgba(0, 0, 0, 0.36);
+
+  --page-bg: #101a25;
+  --surface-muted: #1a2735;
+  --surface-muted-2: #1d2b3a;
+  --surface-muted-3: #1d2c3b;
+  --surface-muted-4: #1c2937;
+  --surface-muted-5: #1b2836;
+  --surface-input: #253749;
+
+  --surface-soft: #223445;
+  --surface-soft-alt: #263a4e;
+  --surface-soft-hover: #2b4157;
+  --surface-soft-hover2: #2f4760;
+  --surface-soft-hover3: #344f69;
+  --surface-soft-hover4: #2d445c;
+  --surface-soft-strong: #2a3f53;
+  --surface-soft-toned: #2c4157;
+  --surface-soft-toned-hover: #344d65;
+  --surface-soft-action: #2b4055;
+  --surface-soft-action-hover: #34506a;
+  --surface-current-account: #253a4f;
+  --surface-blue-soft: #24384d;
+  --surface-chip: #2a4156;
+
+  --accent-border-soft: #3f668c;
+  --accent-border-hover: #4e7ca8;
+  --accent-bg-soft: #2f506f;
+  --border-accent: #4b729a;
+  --border-accent-strong: #5a83ac;
+  --border-divider: #2f455c;
+  --border-divider-strong: #3c566f;
+  --border-dashed: #3d546a;
+  --border-dashed-chat: #415b72;
+  --border-muted: #3d586f;
+  --border-muted-blue: #45657f;
+  --border-muted-blue-2: #4b6d89;
+
+  --focus-border: #6cb0ec;
+  --focus-border-strong: #79baf2;
+  --toggle-off: #516a84;
+
+  --chat-shell-bg: #111e2b;
+  --chat-wallpaper-bg: #152433;
+
+  --bubble-border: #3a5875;
+  --bubble-own-bg: #274a6c;
+  --bubble-own-border: #406a90;
+  --bubble-own-text: #ddecff;
+
+  --file-border: #496984;
+  --file-own-bg: #2e4c67;
+  --file-own-border: #4f7190;
+  --file-own-hover: #36597a;
+
+  --avatar-muted: #4d6781;
+  --avatar-gradient-start: #5f89b4;
+  --avatar-gradient-end: #49759f;
+  --brand-gradient-start: #5caafd;
+  --brand-gradient-end: #3f90ea;
+  --brand-gradient-alt-start: #5ba5f5;
+  --brand-gradient-alt-end: #458fdd;
+
+  --accent-text-strong: #8ec6ff;
+  --accent-text-stronger: #9ad0ff;
+
+  --icon-muted: #8fa5bb;
+  --icon-secondary: #9ab4cb;
+  --message-meta: #9db4c9;
+  --message-meta-strong: #b2c7dc;
+
+  --like-color: #ff7c89;
+  --repost-color: #60d79a;
+
+  --danger-bg-soft: #4d2f37;
+  --danger-border-soft: #71454d;
+  --danger-text-soft: #ffadb3;
+  --danger-bg-muted: #492d34;
+  --danger-bg-subtle: #472b32;
+  --danger-border-muted: #6c4249;
+  --danger-text-muted: #f9a5ab;
+  --danger-button: #d96767;
+  --danger-button-hover: #c35c5c;
+
+  --success-bg: #204436;
+  --success-border: #2f5f4d;
+  --success-text: #81e2b6;
+
+  --login-grad-1: #101a25;
+  --login-grad-2: #182635;
+  --login-grad-3: #121f2d;
+
+  --selection-text: #e8f3ff;
+  --scrollbar: #4e657d;
+  --scrollbar-hover: #607891;
+  --input-focus-border: #6eb0eb;
+  --input-focus-bg: #24384b;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  font-family: 'Rubik', 'Segoe UI', sans-serif;
+  background: var(--bg-canvas);
+  color: var(--text-primary);
+  overflow: hidden;
+  line-height: 1.4;
+  letter-spacing: 0.01em;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+::selection {
+  background: rgba(51, 144, 236, 0.3);
+  color: var(--selection-text);
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-hover);
+}
+
+input,
+textarea,
+select {
+  font-family: inherit;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  border-radius: 12px;
+  padding: 10px 12px;
+  outline: none;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-tertiary);
+}
+
+input:hover,
+textarea:hover,
+select:hover {
+  border-color: var(--border-strong);
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--input-focus-border);
+  background: var(--input-focus-bg);
+  box-shadow: 0 0 0 3px rgba(51, 144, 236, 0.15);
+}
+
+button {
+  font-family: inherit;
+  background: var(--primary);
+  color: var(--white);
+  border: 1px solid transparent;
+  border-radius: 10px;
+  padding: 9px 14px;
+  cursor: pointer;
+  transition: background-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+  font-weight: 600;
+}
+
+button:hover:not(:disabled) {
+  background: var(--primary-hover);
+  box-shadow: 0 6px 14px rgba(51, 144, 236, 0.28);
+}
+
+button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+

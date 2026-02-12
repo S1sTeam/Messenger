@@ -1,0 +1,111 @@
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.96);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1001;
+  backdrop-filter: blur(20px);
+}
+
+.modal {
+  width: 100%;
+  max-width: 420px;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 60px 40px;
+  position: relative;
+}
+
+.pulseRing {
+  position: absolute;
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  border: 2px solid;
+  pointer-events: none;
+}
+
+.avatar {
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 64px;
+  font-weight: 700;
+  margin-bottom: 32px;
+  position: relative;
+  z-index: 1;
+  border: 4px solid rgba(255, 255, 255, 0.1);
+}
+
+.callerName {
+  font-size: 32px;
+  font-weight: 700;
+  margin: 0 0 12px 0;
+  color: white;
+  text-align: center;
+}
+
+.callType {
+  font-size: 18px;
+  color: rgba(255, 255, 255, 0.8);
+  margin: 0 0 48px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.buttons {
+  display: flex;
+  gap: 24px;
+}
+
+.button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 32px;
+  border-radius: 20px;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+  transition: all 0.3s;
+}
+
+.button span {
+  font-size: 14px;
+}
+
+.reject {
+  background: rgba(239, 68, 68, 0.9);
+  color: white;
+}
+
+.reject:hover {
+  background: rgba(220, 38, 38, 0.9);
+  box-shadow: 0 8px 24px rgba(239, 68, 68, 0.4);
+}
+
+.answer {
+  background: rgba(34, 197, 94, 0.9);
+  color: white;
+}
+
+.answer:hover {
+  background: rgba(22, 163, 74, 0.9);
+  box-shadow: 0 8px 24px rgba(34, 197, 94, 0.4);
+}

@@ -1,0 +1,162 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id          String   @id @default(uuid())
+  phone       String   @unique
+  password    String
+  username    String?  @unique
+  displayName String
+  avatar      String?
+  bio         String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  sentMessages     Message[]       @relation("SentMessages")
+  chats            ChatParticipant[]
+  posts            Post[]
+  likes            Like[]
+  reposts          Repost[]
+  comments         Comment[]
+  settings         UserSettings?
+  followers        Follow[]        @relation("Following")
+  following        Follow[]        @relation("Follower")
+  callerCalls      MissedCall[]    @relation("CallerCalls")
+  recipientCalls   MissedCall[]    @relation("RecipientCalls")
+}
+
+model UserSettings {
+  id                    String  @id @default(uuid())
+  userId                String  @unique
+  user                  User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  notifications         Boolean @default(true)
+  notificationSound     Boolean @default(true)
+  darkMode              Boolean @default(true)
+  fontSize              String  @default("medium")
+  language              String  @default("ru")
+  twoFactorAuth         Boolean @default(false)
+}
+
+model Chat {
+  id          String   @id @default(uuid())
+  type        String   // 'private' or 'group'
+  name        String?
+  avatar      String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  participants ChatParticipant[]
+  messages     Message[]
+}
+
+model ChatParticipant {
+  id         String   @id @default(uuid())
+  chatId     String
+  userId     String
+  joinedAt   DateTime @default(now())
+  isPinned   Boolean  @default(false)
+  isArchived Boolean  @default(false)
+  isMuted    Boolean  @default(false)
+
+  chat       Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([chatId, userId])
+}
+
+model Message {
+  id        String   @id @default(uuid())
+  chatId    String
+  senderId  String
+  content   String
+  type      String   @default("text") // 'text', 'image', 'file', 'voice'
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  chat      Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  sender    User     @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+}
+
+model Post {
+  id        String   @id @default(uuid())
+  authorId  String
+  content   String
+  images    String   @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  author    User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  likes     Like[]
+  reposts   Repost[]
+  comments  Comment[]
+}
+
+model Like {
+  id        String   @id @default(uuid())
+  postId    String
+  userId    String
+  createdAt DateTime @default(now())
+
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+}
+
+model Repost {
+  id        String   @id @default(uuid())
+  postId    String
+  userId    String
+  createdAt DateTime @default(now())
+
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  postId    String
+  userId    String
+  parentId  String?
+  content   String
+  createdAt DateTime @default(now())
+
+  post      Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent    Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   Comment[] @relation("CommentReplies")
+}
+
+model Follow {
+  id          String   @id @default(uuid())
+  followerId  String
+  followingId String
+  createdAt   DateTime @default(now())
+
+  follower    User     @relation("Follower", fields: [followerId], references: [id], onDelete: Cascade)
+  following   User     @relation("Following", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followingId])
+}
+
+model MissedCall {
+  id          String   @id @default(uuid())
+  callerId    String
+  recipientId String
+  callType    String   // 'audio' or 'video'
+  createdAt   DateTime @default(now())
+  isViewed    Boolean  @default(false)
+
+  caller      User     @relation("CallerCalls", fields: [callerId], references: [id], onDelete: Cascade)
+  recipient   User     @relation("RecipientCalls", fields: [recipientId], references: [id], onDelete: Cascade)
+}

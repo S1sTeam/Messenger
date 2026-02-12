@@ -1,0 +1,270 @@
+.container {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 16px;
+  height: 100%;
+  overflow-y: auto;
+  background: var(--page-bg);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 0 0 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.backBtn {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.backBtn:hover {
+  background: var(--surface-soft-hover);
+  box-shadow: none;
+}
+
+.header h2 {
+  font-size: 24px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.profileHeader {
+  text-align: center;
+  margin-bottom: 14px;
+  padding: 16px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+}
+
+.avatar {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  margin: 0 auto 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.displayName {
+  font-size: 27px;
+  font-weight: 600;
+  margin: 0 0 3px;
+  color: var(--text-primary);
+}
+
+.username {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin: 0 0 10px;
+}
+
+.bio {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin: 0 0 12px;
+  line-height: 1.45;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 10px 0;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 9px;
+  border-radius: 9px;
+  border: 1px solid var(--border);
+  background: var(--surface-muted-2);
+}
+
+.statValue {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1;
+}
+
+.statLabel {
+  font-size: 11px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.followBtn {
+  margin-top: 8px;
+  padding: 9px 18px;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 600;
+  min-width: 150px;
+}
+
+.followBtn.following,
+.following {
+  background: var(--surface-soft);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+}
+
+.followBtn.following:hover,
+.following:hover {
+  background: var(--danger-bg-muted);
+  border-color: var(--danger-border-muted);
+  color: var(--danger-text-muted);
+  box-shadow: none;
+}
+
+.postsSection {
+  margin-top: 8px;
+}
+
+.postsSection h3 {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 10px;
+  color: var(--text-primary);
+}
+
+.posts {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.post {
+  background: var(--bg-surface);
+  border-radius: 10px;
+  padding: 11px;
+  border: 1px solid var(--border);
+}
+
+.postContent {
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.postFooter {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.postFooter span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.postDate {
+  margin-left: auto;
+  color: var(--text-tertiary);
+}
+
+.noPosts {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 42px 16px;
+  color: var(--text-secondary);
+  text-align: center;
+  border: 1px dashed var(--border-dashed);
+  border-radius: 10px;
+  background: var(--surface-muted-2);
+}
+
+.noPosts svg {
+  opacity: 0.35;
+  margin-bottom: 8px;
+}
+
+.loading,
+.error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--border-muted);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 10px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.error button {
+  margin-top: 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
+}
+
+@media (max-width: 760px) {
+  .container {
+    padding: 10px;
+  }
+
+  .profileHeader {
+    padding: 12px;
+    border-radius: 10px;
+  }
+
+  .displayName {
+    font-size: 23px;
+  }
+
+  .stats {
+    grid-template-columns: 1fr;
+  }
+
+  .postFooter {
+    flex-wrap: wrap;
+  }
+
+  .postDate {
+    width: 100%;
+    margin-left: 0;
+  }
+}
+
+
+
+

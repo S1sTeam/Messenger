@@ -1,0 +1,54 @@
+.container {
+  display: flex;
+  width: 100%;
+  height: 100vh;
+}
+
+.chatListWrapper {
+  display: flex;
+  flex-direction: column;
+  width: 380px;
+  border-right: 1px solid var(--border);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-secondary);
+}
+
+.header h2 {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.newChatBtn {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.newChatBtn:hover {
+  background: var(--bg-hover);
+  border-color: var(--accent);
+}
+
+.empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-tertiary);
+  font-size: 16px;
+}

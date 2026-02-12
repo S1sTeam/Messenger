@@ -1,0 +1,33 @@
+.container {
+  display: flex;
+  gap: 10px;
+  height: 100vh;
+  padding: 10px;
+  overflow: hidden;
+  background: var(--bg-page);
+}
+
+.content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  overflow: hidden;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow-md);
+}
+
+@media (max-width: 900px) {
+  .container {
+    padding: 6px;
+    gap: 6px;
+  }
+
+  .content {
+    border-radius: 12px;
+  }
+}
+
+
+

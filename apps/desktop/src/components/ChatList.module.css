@@ -1,0 +1,141 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.header,
+.title,
+.newChatBtn {
+  display: none;
+}
+
+.searchWrapper {
+  position: sticky;
+  top: 0;
+  padding: 12px 14px;
+  z-index: 3;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.searchIcon {
+  position: absolute;
+  left: 28px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-tertiary);
+  pointer-events: none;
+}
+
+.search {
+  width: 100%;
+  padding: 9px 12px 9px 38px;
+  font-size: 14px;
+  background: var(--bg-subtle);
+  border-radius: 10px;
+  border: 1px solid var(--border);
+}
+
+.list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+  background: var(--bg-surface);
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 36px 16px;
+  margin-top: 8px;
+  text-align: center;
+  border: 1px dashed var(--border-dashed);
+  border-radius: 12px;
+  background: var(--surface-muted-3);
+}
+
+.emptyIcon {
+  color: var(--icon-muted);
+  margin-bottom: 10px;
+}
+
+.emptyTitle {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 3px;
+}
+
+.emptyText {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.archiveSection {
+  margin-bottom: 6px;
+}
+
+.archiveHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background-color 0.18s ease;
+  user-select: none;
+}
+
+.archiveHeader:hover {
+  background: var(--bg-hover);
+}
+
+.archiveIcon {
+  display: inline-flex;
+  align-items: center;
+  color: var(--icon-secondary);
+}
+
+.archiveTitle {
+  flex: 1;
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.archiveCount {
+  font-size: 11px;
+  color: var(--text-secondary);
+  background: var(--surface-muted-4);
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.archiveArrow {
+  display: inline-flex;
+  align-items: center;
+  color: var(--text-tertiary);
+}
+
+@media (max-width: 900px) {
+  .searchWrapper {
+    padding: 10px;
+  }
+
+  .searchIcon {
+    left: 22px;
+  }
+
+  .list {
+    padding: 6px;
+  }
+}
+
+
+

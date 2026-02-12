@@ -1,0 +1,277 @@
+.container {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--chat-shell-bg);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-surface);
+}
+
+.userInfo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(145deg, var(--avatar-gradient-start), var(--avatar-gradient-end));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--white);
+  flex-shrink: 0;
+}
+
+.name {
+  font-size: 15px;
+  font-weight: 500;
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.status {
+  font-size: 12px;
+  color: var(--primary);
+}
+
+.status.offline {
+  color: var(--text-tertiary);
+}
+
+.actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.actionBtn {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-secondary);
+  border-radius: 9px;
+  cursor: pointer;
+}
+
+.actionBtn:hover {
+  color: var(--text-primary);
+  background: var(--bg-hover);
+  box-shadow: none;
+}
+
+.messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 18px 18px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background-color: var(--chat-wallpaper-bg);
+  background-image:
+    radial-gradient(circle at 25px 25px, rgba(255, 255, 255, 0.32) 2px, transparent 2px),
+    radial-gradient(circle at 75px 75px, rgba(255, 255, 255, 0.26) 2px, transparent 2px);
+  background-size: 100px 100px;
+}
+
+.emptyState {
+  margin: auto;
+  min-width: min(92%, 320px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--text-secondary);
+  padding: 26px;
+  border-radius: 12px;
+  border: 1px solid var(--border-dashed-chat);
+  background: var(--surface-muted-2);
+  text-align: center;
+}
+
+.emptyState svg {
+  color: var(--icon-muted);
+}
+
+.emptyState p {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.emptyState span {
+  font-size: 13px;
+}
+
+.inputArea {
+  padding: 10px 14px 14px;
+  border-top: 1px solid var(--border);
+  background: var(--bg-surface);
+  position: relative;
+}
+
+.inputWrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-subtle);
+  border-radius: 12px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+}
+
+.attachments {
+  display: flex;
+  gap: 2px;
+}
+
+.attachBtn {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.attachBtn:hover {
+  background: var(--surface-soft-alt);
+  color: var(--text-primary);
+  box-shadow: none;
+}
+
+.input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  padding: 6px 2px;
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.input::placeholder {
+  color: var(--text-tertiary);
+}
+
+.sendBtn {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--primary);
+  border: none;
+  color: var(--white);
+  border-radius: 9px;
+  cursor: pointer;
+}
+
+.sendBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.picker {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 14px;
+  right: 14px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-md);
+  padding: 12px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.pickerHeader {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.pickerGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+  gap: 7px;
+}
+
+.emojiBtn,
+.stickerBtn {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-soft-strong);
+  border: 1px solid var(--border);
+  color: var(--icon-secondary);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.emojiBtn:hover,
+.stickerBtn:hover {
+  background: var(--surface-soft-hover3);
+  color: var(--primary);
+  box-shadow: none;
+}
+
+.emojiBtn svg,
+.stickerBtn svg {
+  display: block;
+}
+
+@media (max-width: 900px) {
+  .header {
+    padding: 8px 10px;
+  }
+
+  .messages {
+    padding: 12px;
+  }
+
+  .inputArea {
+    padding: 8px 10px 10px;
+  }
+
+  .picker {
+    left: 10px;
+    right: 10px;
+  }
+}
+
+
+
+
