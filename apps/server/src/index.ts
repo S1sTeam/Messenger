@@ -17,6 +17,8 @@ import { setupSocketHandlers } from './socket/index.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+// Prefer `apps/server/.env` for stable workspace runs, then fallback to cwd `.env`.
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
 dotenv.config();
 
 const app = express();

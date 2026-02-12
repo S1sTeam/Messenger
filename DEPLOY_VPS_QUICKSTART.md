@@ -34,6 +34,7 @@ CORS_ORIGINS=https://your-domain.com,http://your-vps-ip
 EMAIL_PROVIDER=gmail
 GMAIL_USER=your@gmail.com
 GMAIL_APP_PASSWORD=your-16-char-app-password
+EMAIL_FROM_NAME=Messenger
 # EMAIL_FROM=your@gmail.com
 ```
 
