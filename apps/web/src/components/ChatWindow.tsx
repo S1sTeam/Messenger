@@ -6,6 +6,7 @@ import { ChatMenu } from './ChatMenu';
 import { CallModal } from './CallModal';
 import { useChatStore } from '../store/chatStore';
 import { useAuthStore } from '../store/authStore';
+import { toBackendUrl } from '../config/network';
 import styles from './ChatWindow.module.css';
 
 interface ChatWindowProps {
@@ -36,7 +37,7 @@ export const ChatWindow = ({ chatId, onChatDeleted }: ChatWindowProps) => {
 
   const chat = chats.find(c => c.id === chatId);
   
-  // Определяем собеседника и его онлайн статус
+  // РћРїСЂРµРґРµР»СЏРµРј СЃРѕР±РµСЃРµРґРЅРёРєР° Рё РµРіРѕ РѕРЅР»Р°Р№РЅ СЃС‚Р°С‚СѓСЃ
   const otherUserId = chat?.participants.find(id => id !== user?.id);
   const isRecipientOnline = otherUserId ? isUserOnline(otherUserId) : false;
 
@@ -44,7 +45,7 @@ export const ChatWindow = ({ chatId, onChatDeleted }: ChatWindowProps) => {
     if (chatId) {
       loadMessages(chatId);
       
-      // Отмечаем все непрочитанные сообщения как прочитанные
+      // РћС‚РјРµС‡Р°РµРј РІСЃРµ РЅРµРїСЂРѕС‡РёС‚Р°РЅРЅС‹Рµ СЃРѕРѕР±С‰РµРЅРёСЏ РєР°Рє РїСЂРѕС‡РёС‚Р°РЅРЅС‹Рµ
       if (socket && messages.length > 0) {
         const unreadMessageIds = messages
           .filter(m => !m.isRead && m.senderId !== user?.id)
@@ -65,9 +66,9 @@ export const ChatWindow = ({ chatId, onChatDeleted }: ChatWindowProps) => {
     if (socket && chatId) {
       socket.emit('chat:join', chatId);
       
-      // Слушаем когда сообщения прочитаны
+      // РЎР»СѓС€Р°РµРј РєРѕРіРґР° СЃРѕРѕР±С‰РµРЅРёСЏ РїСЂРѕС‡РёС‚Р°РЅС‹
       const handleMessagesRead = ({ messageIds }: { messageIds: string[] }) => {
-        console.log('✅ Messages marked as read:', messageIds);
+        console.log('вњ… Messages marked as read:', messageIds);
       };
       
       socket.on('messages:read', handleMessagesRead);
@@ -117,9 +118,9 @@ export const ChatWindow = ({ chatId, onChatDeleted }: ChatWindowProps) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Проверка размера файла (макс 10MB)
+    // РџСЂРѕРІРµСЂРєР° СЂР°Р·РјРµСЂР° С„Р°Р№Р»Р° (РјР°РєСЃ 10MB)
     if (file.size > 10 * 1024 * 1024) {
-      alert('Файл слишком большой. Максимальный размер: 10MB');
+      alert('Р¤Р°Р№Р» СЃР»РёС€РєРѕРј Р±РѕР»СЊС€РѕР№. РњР°РєСЃРёРјР°Р»СЊРЅС‹Р№ СЂР°Р·РјРµСЂ: 10MB');
       return;
     }
 
@@ -134,7 +135,7 @@ export const ChatWindow = ({ chatId, onChatDeleted }: ChatWindowProps) => {
       const { state } = JSON.parse(authStorage);
       const token = state?.token;
 
-      const response = await fetch('http://localhost:3000/api/upload', {
+      const response = await fetch(toBackendUrl('/api/upload'), {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -143,29 +144,29 @@ export const ChatWindow = ({ chatId, onChatDeleted }: ChatWindowProps) => {
       });
 
       if (!response.ok) {
-        throw new Error('Ошибка загрузки файла');
+        throw new Error('РћС€РёР±РєР° Р·Р°РіСЂСѓР·РєРё С„Р°Р№Р»Р°');
       }
 
       const data = await response.json();
       
-      // Отправляем сообщение с файлом
+      // РћС‚РїСЂР°РІР»СЏРµРј СЃРѕРѕР±С‰РµРЅРёРµ СЃ С„Р°Р№Р»РѕРј
       const fileType = file.type.startsWith('image/') ? 'image' : 
                        file.type.startsWith('video/') ? 'video' : 'file';
       
       await sendMessage(chatId, `[${fileType}]${data.url}`);
       
-      // Очищаем input
+      // РћС‡РёС‰Р°РµРј input
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
     } catch (error) {
-      console.error('Ошибка загрузки файла:', error);
-      alert('Не удалось загрузить файл');
+      console.error('РћС€РёР±РєР° Р·Р°РіСЂСѓР·РєРё С„Р°Р№Р»Р°:', error);
+      alert('РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ С„Р°Р№Р»');
     }
   };
 
-  const emojis = ['😀', '😂', '❤️', '👍', '🔥', '🎉', '😍', '🤔', '👏', '🙌', '💯', '✨'];
-  const stickers = ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮'];
+  const emojis = ['рџЂ', 'рџ‚', 'вќ¤пёЏ', 'рџ‘Ќ', 'рџ”Ґ', 'рџЋ‰', 'рџЌ', 'рџ¤”', 'рџ‘Џ', 'рџ™Њ', 'рџ’Ї', 'вњЁ'];
+  const stickers = ['рџђ¶', 'рџђ±', 'рџђ­', 'рџђ№', 'рџђ°', 'рџ¦Љ', 'рџђ»', 'рџђј', 'рџђЁ', 'рџђЇ', 'рџ¦Ѓ', 'рџђ®'];
 
   return (
     <motion.div 
@@ -180,9 +181,9 @@ export const ChatWindow = ({ chatId, onChatDeleted }: ChatWindowProps) => {
             <User size={24} />
           </div>
           <div>
-            <h3 className={styles.name}>{chat?.name || 'Чат'}</h3>
+            <h3 className={styles.name}>{chat?.name || 'Р§Р°С‚'}</h3>
             <span className={`${styles.status} ${!isRecipientOnline && !isTyping ? styles.offline : ''}`}>
-              {isTyping ? 'печатает...' : isRecipientOnline ? 'онлайн' : 'не в сети'}
+              {isTyping ? 'РїРµС‡Р°С‚Р°РµС‚...' : isRecipientOnline ? 'РѕРЅР»Р°Р№РЅ' : 'РЅРµ РІ СЃРµС‚Рё'}
             </span>
           </div>
         </div>
@@ -191,19 +192,19 @@ export const ChatWindow = ({ chatId, onChatDeleted }: ChatWindowProps) => {
           <button
             className={styles.actionBtn}
             onClick={() => {
-              console.log('Аудио звонок нажат');
+              console.log('РђСѓРґРёРѕ Р·РІРѕРЅРѕРє РЅР°Р¶Р°С‚');
               if (socket && chat?.participants && chat.participants.length > 0) {
-                const recipientId = chat.participants[0]; // participants это массив ID
+                const recipientId = chat.participants[0]; // participants СЌС‚Рѕ РјР°СЃСЃРёРІ ID
                 socket.emit('call:initiate', {
                   recipientId,
                   callType: 'audio',
-                  callerName: user?.displayName || 'Пользователь'
+                  callerName: user?.displayName || 'РџРѕР»СЊР·РѕРІР°С‚РµР»СЊ'
                 });
                 setCallType('audio');
                 setIsCallModalOpen(true);
               }
             }}
-            title="Голосовой звонок"
+            title="Р“РѕР»РѕСЃРѕРІРѕР№ Р·РІРѕРЅРѕРє"
           >
             <Phone size={20} />
           </button>
@@ -211,19 +212,19 @@ export const ChatWindow = ({ chatId, onChatDeleted }: ChatWindowProps) => {
           <button
             className={styles.actionBtn}
             onClick={() => {
-              console.log('Видео звонок нажат');
+              console.log('Р’РёРґРµРѕ Р·РІРѕРЅРѕРє РЅР°Р¶Р°С‚');
               if (socket && chat?.participants && chat.participants.length > 0) {
-                const recipientId = chat.participants[0]; // participants это массив ID
+                const recipientId = chat.participants[0]; // participants СЌС‚Рѕ РјР°СЃСЃРёРІ ID
                 socket.emit('call:initiate', {
                   recipientId,
                   callType: 'video',
-                  callerName: user?.displayName || 'Пользователь'
+                  callerName: user?.displayName || 'РџРѕР»СЊР·РѕРІР°С‚РµР»СЊ'
                 });
                 setCallType('video');
                 setIsCallModalOpen(true);
               }
             }}
-            title="Видеозвонок"
+            title="Р’РёРґРµРѕР·РІРѕРЅРѕРє"
           >
             <Video size={20} />
           </button>
@@ -236,8 +237,8 @@ export const ChatWindow = ({ chatId, onChatDeleted }: ChatWindowProps) => {
         {messages.length === 0 ? (
           <div className={styles.emptyState}>
             <MessageSquare size={64} strokeWidth={1} />
-            <p>Нет сообщений</p>
-            <span>Начните диалог</span>
+            <p>РќРµС‚ СЃРѕРѕР±С‰РµРЅРёР№</p>
+            <span>РќР°С‡РЅРёС‚Рµ РґРёР°Р»РѕРі</span>
           </div>
         ) : (
           <>
@@ -261,7 +262,7 @@ export const ChatWindow = ({ chatId, onChatDeleted }: ChatWindowProps) => {
               type="button"
               className={styles.attachBtn}
               onClick={() => fileInputRef.current?.click()}
-              title="Прикрепить файл"
+              title="РџСЂРёРєСЂРµРїРёС‚СЊ С„Р°Р№Р»"
             >
               <Paperclip size={20} />
             </button>
@@ -280,7 +281,7 @@ export const ChatWindow = ({ chatId, onChatDeleted }: ChatWindowProps) => {
                 setShowEmojiPicker(!showEmojiPicker);
                 setShowStickerPicker(false);
               }}
-              title="Эмодзи"
+              title="Р­РјРѕРґР·Рё"
             >
               <Smile size={20} />
             </button>
@@ -292,7 +293,7 @@ export const ChatWindow = ({ chatId, onChatDeleted }: ChatWindowProps) => {
                 setShowStickerPicker(!showStickerPicker);
                 setShowEmojiPicker(false);
               }}
-              title="Стикеры"
+              title="РЎС‚РёРєРµСЂС‹"
             >
               <Sticker size={20} />
             </button>
@@ -301,7 +302,7 @@ export const ChatWindow = ({ chatId, onChatDeleted }: ChatWindowProps) => {
           <input
             ref={inputRef}
             type="text"
-            placeholder="Написать сообщение..."
+            placeholder="РќР°РїРёСЃР°С‚СЊ СЃРѕРѕР±С‰РµРЅРёРµ..."
             value={message}
             onChange={(e) => {
               setMessage(e.target.value);
@@ -323,7 +324,7 @@ export const ChatWindow = ({ chatId, onChatDeleted }: ChatWindowProps) => {
 
         {showEmojiPicker && (
           <div className={styles.picker}>
-            <div className={styles.pickerHeader}>Эмодзи</div>
+            <div className={styles.pickerHeader}>Р­РјРѕРґР·Рё</div>
             <div className={styles.pickerGrid}>
               {emojis.map((emoji, index) => (
                 <button
@@ -345,7 +346,7 @@ export const ChatWindow = ({ chatId, onChatDeleted }: ChatWindowProps) => {
 
         {showStickerPicker && (
           <div className={styles.picker}>
-            <div className={styles.pickerHeader}>Стикеры</div>
+            <div className={styles.pickerHeader}>РЎС‚РёРєРµСЂС‹</div>
             <div className={styles.pickerGrid}>
               {stickers.map((sticker, index) => (
                 <button
@@ -368,7 +369,7 @@ export const ChatWindow = ({ chatId, onChatDeleted }: ChatWindowProps) => {
       <CallModal
         isOpen={isCallModalOpen}
         callType={callType}
-        recipientName={chat?.name || 'Пользователь'}
+        recipientName={chat?.name || 'РџРѕР»СЊР·РѕРІР°С‚РµР»СЊ'}
         recipientId={chatId}
         onClose={() => setIsCallModalOpen(false)}
       />

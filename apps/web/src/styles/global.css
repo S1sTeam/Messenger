@@ -1,18 +1,22 @@
+@import url('https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap');
+
 :root {
-  --bg-primary: #0f0f0f;
-  --bg-secondary: #1a1a1a;
-  --bg-tertiary: #242424;
-  --bg-hover: #2a2a2a;
-  --text-primary: #ffffff;
-  --text-secondary: #a0a0a0;
-  --text-tertiary: #707070;
-  --primary: #0088cc;
-  --secondary: #00aaff;
-  --accent: #0088cc;
-  --accent-hover: #006699;
-  --border: #2a2a2a;
-  --success: #4caf50;
-  --error: #f44336;
+  --bg-primary: #0e1621;
+  --bg-secondary: #17212b;
+  --bg-tertiary: #1f2c38;
+  --bg-elevated: #223242;
+  --bg-hover: #283b4d;
+  --text-primary: #e6edf3;
+  --text-secondary: #9cb0c4;
+  --text-tertiary: #6f8498;
+  --primary: #2ea6ff;
+  --secondary: #58b8ff;
+  --accent: #2ea6ff;
+  --accent-hover: #6bc2ff;
+  --accent-soft: rgba(46, 166, 255, 0.16);
+  --border: #233546;
+  --success: #4fce5d;
+  --error: #ff5d6c;
 }
 
 * {
@@ -21,15 +25,26 @@
   box-sizing: border-box;
 }
 
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+}
+
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-  background: var(--bg-primary);
+  font-family: 'Rubik', 'Trebuchet MS', sans-serif;
+  background:
+    radial-gradient(1200px 600px at 85% -10%, rgba(46, 166, 255, 0.14), transparent 55%),
+    radial-gradient(900px 450px at -10% 110%, rgba(88, 184, 255, 0.12), transparent 60%),
+    var(--bg-primary);
   color: var(--text-primary);
   overflow: hidden;
 }
 
 ::-webkit-scrollbar {
-  width: 6px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
@@ -37,39 +52,42 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--bg-tertiary);
-  border-radius: 3px;
+  background: #30465a;
+  border-radius: 10px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--bg-hover);
+  background: #3f5d77;
 }
 
-input, textarea {
+input,
+textarea {
   font-family: inherit;
   background: var(--bg-tertiary);
   border: 1px solid var(--border);
   color: var(--text-primary);
-  border-radius: 8px;
+  border-radius: 12px;
   padding: 10px 14px;
   outline: none;
-  transition: all 0.2s;
+  transition: border-color 0.2s, background-color 0.2s, box-shadow 0.2s;
 }
 
-input:focus, textarea:focus {
+input:focus,
+textarea:focus {
   border-color: var(--accent);
-  background: var(--bg-secondary);
+  background: var(--bg-elevated);
+  box-shadow: 0 0 0 3px rgba(46, 166, 255, 0.18);
 }
 
 button {
   font-family: inherit;
   background: var(--accent);
-  color: white;
+  color: #f3f8fc;
   border: none;
-  border-radius: 8px;
+  border-radius: 12px;
   padding: 10px 20px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: transform 0.2s, background-color 0.2s;
   font-weight: 500;
 }
 
@@ -80,4 +98,10 @@ button:hover {
 
 button:active {
   transform: translateY(0);
+}
+
+@media (max-width: 980px) {
+  body {
+    overflow: auto;
+  }
 }

@@ -2,16 +2,20 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  background: var(--bg-primary);
+  min-width: 0;
+  background:
+    radial-gradient(700px 340px at 100% -8%, rgba(46, 166, 255, 0.08), transparent 58%),
+    linear-gradient(180deg, rgba(18, 26, 34, 0.96) 0%, rgba(14, 22, 31, 0.98) 100%);
 }
 
 .header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 24px;
+  padding: 14px 18px;
   border-bottom: 1px solid var(--border);
-  background: var(--bg-secondary);
+  background: rgba(24, 35, 46, 0.82);
+  backdrop-filter: blur(8px);
 }
 
 .userInfo {
@@ -23,12 +27,12 @@
 .avatar {
   width: 44px;
   height: 44px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  border-radius: 50%;
+  background: linear-gradient(155deg, #2ea6ff 0%, #167ed9 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
+  color: #ecf6ff;
 }
 
 .name {
@@ -48,37 +52,38 @@
 
 .actions {
   display: flex;
-  gap: 4px;
+  gap: 6px;
   align-items: center;
 }
 
 .actionBtn {
-  width: 40px;
-  height: 40px;
+  width: 38px;
+  height: 38px;
   padding: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   background: transparent;
-  border: none;
+  border: 1px solid transparent;
   color: var(--text-secondary);
   border-radius: 10px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: background-color 0.2s, color 0.2s, border-color 0.2s;
 }
 
 .actionBtn:hover {
-  background: var(--bg-hover);
+  background: rgba(255, 255, 255, 0.04);
+  border-color: var(--border);
   color: var(--text-primary);
 }
 
 .messages {
   flex: 1;
   overflow-y: auto;
-  padding: 24px;
+  padding: 20px 18px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
 .emptyState {
@@ -93,7 +98,7 @@
 
 .emptyState svg {
   color: var(--text-tertiary);
-  opacity: 0.3;
+  opacity: 0.35;
   margin-bottom: 8px;
 }
 
@@ -106,23 +111,24 @@
 
 .emptyState span {
   font-size: 14px;
-  opacity: 0.7;
+  opacity: 0.8;
 }
 
 .inputArea {
-  padding: 16px 24px;
+  padding: 14px 18px;
   border-top: 1px solid var(--border);
-  background: var(--bg-secondary);
+  background: rgba(24, 35, 46, 0.9);
   position: relative;
 }
 
 .inputWrapper {
   display: flex;
   align-items: center;
-  gap: 12px;
-  background: var(--bg-tertiary);
-  border-radius: 12px;
-  padding: 8px 12px;
+  gap: 10px;
+  background: #1d2c3b;
+  border-radius: 16px;
+  padding: 8px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
 }
 
 .attachments {
@@ -131,8 +137,8 @@
 }
 
 .attachBtn {
-  width: 36px;
-  height: 36px;
+  width: 34px;
+  height: 34px;
   padding: 0;
   display: flex;
   align-items: center;
@@ -146,7 +152,7 @@
 }
 
 .attachBtn:hover {
-  background: var(--bg-hover);
+  background: rgba(255, 255, 255, 0.05);
   color: var(--text-primary);
 }
 
@@ -155,7 +161,7 @@
   background: transparent;
   border: none;
   outline: none;
-  padding: 8px;
+  padding: 8px 4px;
   color: var(--text-primary);
   font-size: 15px;
 }
@@ -165,16 +171,16 @@
 }
 
 .sendBtn {
-  width: 40px;
-  height: 40px;
+  width: 38px;
+  height: 38px;
   padding: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  background: linear-gradient(155deg, #2ea6ff 0%, #1e8ae8 100%);
   border: none;
-  color: white;
-  border-radius: 10px;
+  color: #ecf6ff;
+  border-radius: 12px;
   cursor: pointer;
   transition: all 0.2s;
 }
@@ -187,14 +193,14 @@
 .picker {
   position: absolute;
   bottom: calc(100% + 8px);
-  left: 24px;
-  right: 24px;
-  background: var(--bg-secondary);
+  left: 18px;
+  right: 18px;
+  background: #1d2c3b;
   border: 1px solid var(--border);
   border-radius: 12px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
-  padding: 16px;
-  max-height: 300px;
+  box-shadow: 0 18px 36px rgba(6, 12, 18, 0.45);
+  padding: 14px;
+  max-height: 280px;
   overflow-y: auto;
 }
 
@@ -202,32 +208,51 @@
   font-size: 14px;
   font-weight: 600;
   color: var(--text-secondary);
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
 .pickerGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(48px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(44px, 1fr));
   gap: 8px;
 }
 
 .emojiBtn,
 .stickerBtn {
-  width: 48px;
-  height: 48px;
+  width: 44px;
+  height: 44px;
   padding: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   background: transparent;
   border: none;
-  font-size: 24px;
-  border-radius: 8px;
+  font-size: 23px;
+  border-radius: 10px;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .emojiBtn:hover,
 .stickerBtn:hover {
-  background: var(--bg-hover);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+@media (max-width: 980px) {
+  .header {
+    padding: 12px;
+  }
+
+  .messages {
+    padding: 14px 10px;
+  }
+
+  .inputArea {
+    padding: 10px;
+  }
+
+  .picker {
+    left: 10px;
+    right: 10px;
+  }
 }

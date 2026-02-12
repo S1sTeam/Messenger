@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Plus } from 'lucide-react';
 import { ChatList } from '../components/ChatList';
 import { ChatWindow } from '../components/ChatWindow';
 import { NewChatModal } from '../components/NewChatModal';
 import { useAuthStore } from '../store/authStore';
+import { toBackendUrl } from '../config/network';
 import styles from './ChatsPage.module.css';
 
 export const ChatsPage = () => {
@@ -13,19 +15,18 @@ export const ChatsPage = () => {
 
   const handleCreateChat = async (userId: string) => {
     try {
-      const response = await fetch('http://localhost:3000/api/chats', {
+      const response = await fetch(toBackendUrl('/api/chats'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ userId })
+        body: JSON.stringify({ userId }),
       });
 
       if (response.ok) {
         const data = await response.json();
         setSelectedChat(data.chat.id);
-        // Обновляем список чатов
         window.location.reload();
       }
     } catch (error) {
@@ -45,22 +46,15 @@ export const ChatsPage = () => {
             whileTap={{ scale: 0.95 }}
             title="Новый чат"
           >
-            <span style={{ fontSize: '20px', fontWeight: 'bold', color: '#999', lineHeight: '1' }}>+</span>
+            <Plus size={18} />
           </motion.button>
         </div>
-        <ChatList 
-          selectedChat={selectedChat} 
-          onSelectChat={setSelectedChat} 
-        />
+        <ChatList selectedChat={selectedChat} onSelectChat={setSelectedChat} />
       </div>
-      
+
       <AnimatePresence mode="wait">
         {selectedChat ? (
-          <ChatWindow 
-            key={selectedChat} 
-            chatId={selectedChat}
-            onChatDeleted={() => setSelectedChat(null)}
-          />
+          <ChatWindow key={selectedChat} chatId={selectedChat} onChatDeleted={() => setSelectedChat(null)} />
         ) : (
           <motion.div
             key="empty"

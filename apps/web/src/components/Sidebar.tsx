@@ -15,7 +15,7 @@ export const Sidebar = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   return (
-    <motion.div 
+    <motion.div
       className={styles.sidebar}
       style={{ width: isCollapsed ? 88 : 280 }}
       initial={{ x: -280 }}
@@ -23,7 +23,7 @@ export const Sidebar = () => {
       transition={{ duration: 0.3 }}
     >
       <div className={styles.logo}>
-        <MessageCircle size={32} />
+        <MessageCircle size={30} />
       </div>
 
       <nav className={styles.nav}>
@@ -31,11 +31,11 @@ export const Sidebar = () => {
           className={styles.navItem}
           onClick={() => setIsCollapsed(!isCollapsed)}
           title={isCollapsed ? 'Развернуть меню' : 'Свернуть меню'}
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
+          whileHover={{ scale: 1.01 }}
+          whileTap={{ scale: 0.99 }}
         >
           <div className={styles.iconWrapper}>
-            {isCollapsed ? <PanelLeftOpen size={24} /> : <PanelLeftClose size={24} />}
+            {isCollapsed ? <PanelLeftOpen size={22} /> : <PanelLeftClose size={22} />}
           </div>
           {!isCollapsed && <span className={styles.label}>Свернуть</span>}
         </motion.button>
@@ -46,13 +46,11 @@ export const Sidebar = () => {
           <NavLink
             key={item.path}
             to={item.path}
-            className={({ isActive }) => 
-              `${styles.navItem} ${isActive ? styles.active : ''}`
-            }
+            className={({ isActive }) => `${styles.navItem} ${isActive ? styles.active : ''}`}
             title={isCollapsed ? item.label : undefined}
           >
             <div className={styles.iconWrapper}>
-              <item.icon size={24} />
+              <item.icon size={22} />
             </div>
             {!isCollapsed && <span className={styles.label}>{item.label}</span>}
           </NavLink>
@@ -61,7 +59,7 @@ export const Sidebar = () => {
 
       <div className={styles.bottom}>
         {!isCollapsed && (
-          <motion.div 
+          <motion.div
             className={styles.accountSwitcherWrapper}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -70,16 +68,14 @@ export const Sidebar = () => {
             <AccountSwitcher />
           </motion.div>
         )}
-        
+
         <NavLink
           to="/settings"
-          className={({ isActive }) => 
-            `${styles.navItem} ${isActive ? styles.active : ''}`
-          }
+          className={({ isActive }) => `${styles.navItem} ${isActive ? styles.active : ''}`}
           title={isCollapsed ? 'Настройки' : undefined}
         >
           <div className={styles.iconWrapper}>
-            <Settings size={24} />
+            <Settings size={22} />
           </div>
           {!isCollapsed && <span className={styles.label}>Настройки</span>}
         </NavLink>
