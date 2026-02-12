@@ -51,6 +51,8 @@ export const CallModal = ({
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
   const screenStreamRef = useRef<MediaStream | null>(null);
+  const microphoneTrackRef = useRef<MediaStreamTrack | null>(null);
+  const screenAudioTrackRef = useRef<MediaStreamTrack | null>(null);
   const pendingIceCandidatesRef = useRef<RTCIceCandidateInit[]>([]);
   const endingRef = useRef(false);
   const callerStartedRef = useRef(false);
@@ -77,6 +79,8 @@ export const CallModal = ({
 
     localStreamRef.current = null;
     screenStreamRef.current = null;
+    microphoneTrackRef.current = null;
+    screenAudioTrackRef.current = null;
     pendingIceCandidatesRef.current = [];
     callerStartedRef.current = false;
 
@@ -138,6 +142,7 @@ export const CallModal = ({
 
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       localStreamRef.current = stream;
+      microphoneTrackRef.current = stream.getAudioTracks()[0] || null;
 
       const localVideoTrack = stream.getVideoTracks()[0];
       if (localVideoTrack && 'contentHint' in localVideoTrack) {
@@ -151,7 +156,7 @@ export const CallModal = ({
       return stream;
     } catch (error) {
       console.error('Media access error:', error);
-      alert('РќРµ СѓРґР°Р»РѕСЃСЊ РїРѕР»СѓС‡РёС‚СЊ РґРѕСЃС‚СѓРї Рє РєР°РјРµСЂРµ/РјРёРєСЂРѕС„РѕРЅСѓ');
+      alert('Не удалось получить доступ к камере/микрофону');
       return null;
     }
   }, [callType]);
@@ -222,6 +227,16 @@ export const CallModal = ({
     },
     [applyVideoSenderProfile],
   );
+
+  const replaceAudioTrack = useCallback(async (track: MediaStreamTrack | null) => {
+    const pc = peerConnectionRef.current;
+    if (!pc) return;
+
+    const sender = pc.getSenders().find((item) => item.track?.kind === 'audio');
+    if (!sender) return;
+
+    await sender.replaceTrack(track);
+  }, []);
 
   const createPeerConnection = useCallback(
     (stream: MediaStream | null) => {
@@ -416,7 +431,7 @@ export const CallModal = ({
 
     const handleCallRejected = ({ userId }: { userId: string }) => {
       if (userId !== recipientId) return;
-      alert('Р—РІРѕРЅРѕРє РѕС‚РєР»РѕРЅРµРЅ');
+      alert('Звонок отклонен');
       endCall(false);
     };
 
@@ -427,7 +442,7 @@ export const CallModal = ({
 
     const handleCallOffline = ({ reason }: { reason?: string }) => {
       if (!isInitiator) return;
-      alert(reason || 'РџРѕР»СЊР·РѕРІР°С‚РµР»СЊ СЃРµР№С‡Р°СЃ РЅРµ РІ СЃРµС‚Рё');
+      alert(reason || 'Пользователь сейчас не в сети');
       endCall(false);
     };
 
@@ -468,7 +483,7 @@ export const CallModal = ({
     startAsCaller,
   ]);
 
-  // Р•СЃР»Рё РёСЃС…РѕРґСЏС‰РёР№ Р·РІРѕРЅРѕРє РЅРµ РїСЂРёРЅСЏР»Рё Р·Р° 30 СЃРµРєСѓРЅРґ, СЃС‡РёС‚Р°РµРј РµРіРѕ РїСЂРѕРїСѓС‰РµРЅРЅС‹Рј.
+  // Если исходящий звонок не приняли за 30 секунд, считаем его пропущенным.
   useEffect(() => {
     if (!isOpen || !isInitiator || callStatus !== 'calling' || !socket || !recipientId) {
       return;
@@ -478,7 +493,7 @@ export const CallModal = ({
       if (endingRef.current) return;
 
       socket.emit('call:missed', { recipientId, chatId, callType });
-      alert('РџРѕР»СЊР·РѕРІР°С‚РµР»СЊ РЅРµ РѕС‚РІРµС‚РёР»');
+      alert('Пользователь не ответил');
       endCall(true);
     }, 30000);
 
@@ -505,7 +520,9 @@ export const CallModal = ({
   }, [callStatus]);
 
   const toggleMute = () => {
-    const audioTrack = localStreamRef.current?.getAudioTracks()[0];
+    const pc = peerConnectionRef.current;
+    const senderAudioTrack = pc?.getSenders().find((item) => item.track?.kind === 'audio')?.track || null;
+    const audioTrack = senderAudioTrack || localStreamRef.current?.getAudioTracks()[0];
     if (!audioTrack) return;
 
     audioTrack.enabled = !audioTrack.enabled;
@@ -543,11 +560,18 @@ export const CallModal = ({
     if (isScreenSharing) {
       screenStreamRef.current?.getTracks().forEach((track) => track.stop());
       screenStreamRef.current = null;
+      screenAudioTrackRef.current = null;
 
       const cameraTrack = localStream.getVideoTracks()[0];
       if (cameraTrack) {
         await replaceVideoTrack(cameraTrack, 'camera');
       }
+
+      const micTrack = microphoneTrackRef.current || localStream.getAudioTracks()[0] || null;
+      if (micTrack) {
+        micTrack.enabled = !isMuted;
+      }
+      await replaceAudioTrack(micTrack);
 
       if (localVideoRef.current) {
         localVideoRef.current.srcObject = localStream;
@@ -562,7 +586,11 @@ export const CallModal = ({
       try {
         screenStream = await navigator.mediaDevices.getDisplayMedia({
           video: screenVideoConstraints,
-          audio: true,
+          audio: {
+            echoCancellation: false,
+            noiseSuppression: false,
+            autoGainControl: false,
+          },
         });
       } catch {
         screenStream = await navigator.mediaDevices.getDisplayMedia({
@@ -573,8 +601,17 @@ export const CallModal = ({
 
       const screenTrack = screenStream.getVideoTracks()[0];
       if (!screenTrack) return;
+      const screenAudioTrack = screenStream.getAudioTracks()[0] || null;
 
       await replaceVideoTrack(screenTrack, 'screen');
+      if (screenAudioTrack) {
+        screenAudioTrack.enabled = !isMuted;
+        screenAudioTrackRef.current = screenAudioTrack;
+        await replaceAudioTrack(screenAudioTrack);
+      } else {
+        screenAudioTrackRef.current = null;
+        console.warn('Screen share started without audio track');
+      }
 
       if (localVideoRef.current) {
         localVideoRef.current.srcObject = screenStream;
@@ -587,6 +624,13 @@ export const CallModal = ({
         if (cameraTrack) {
           await replaceVideoTrack(cameraTrack, 'camera');
         }
+
+        const micTrack = microphoneTrackRef.current || localStreamRef.current?.getAudioTracks()[0] || null;
+        if (micTrack) {
+          micTrack.enabled = !isMuted;
+        }
+        await replaceAudioTrack(micTrack);
+        screenAudioTrackRef.current = null;
 
         if (localVideoRef.current && localStreamRef.current) {
           localVideoRef.current.srcObject = localStreamRef.current;
@@ -719,13 +763,13 @@ export const CallModal = ({
                     <motion.div key={callStatus} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className={styles.status}>
                       {callStatus === 'calling' && (
                         <motion.div className={styles.callingStatus} animate={{ opacity: [1, 0.5, 1] }} transition={{ duration: 1.5, repeat: Infinity }}>
-                          <Phone size={18} /> РћР¶РёРґР°РЅРёРµ РѕС‚РІРµС‚Р°...
+                          <Phone size={18} /> Ожидание ответа...
                         </motion.div>
                       )}
 
                       {callStatus === 'connecting' && (
                         <motion.div className={styles.callingStatus} animate={{ opacity: [1, 0.5, 1] }} transition={{ duration: 1.5, repeat: Infinity }}>
-                          <Phone size={18} /> РџРѕРґРєР»СЋС‡РµРЅРёРµ...
+                          <Phone size={18} /> Подключение...
                         </motion.div>
                       )}
 
@@ -748,7 +792,7 @@ export const CallModal = ({
                   onClick={toggleMute}
                   whileHover={{ scale: 1.1, y: -2 }}
                   whileTap={{ scale: 0.95 }}
-                  title={isMuted ? 'Р’РєР»СЋС‡РёС‚СЊ РјРёРєСЂРѕС„РѕРЅ' : 'Р’С‹РєР»СЋС‡РёС‚СЊ РјРёРєСЂРѕС„РѕРЅ'}
+                  title={isMuted ? 'Включить микрофон' : 'Выключить микрофон'}
                 >
                   {isMuted ? <MicOff size={24} /> : <Mic size={24} />}
                 </motion.button>
@@ -760,7 +804,7 @@ export const CallModal = ({
                       onClick={toggleVideo}
                       whileHover={{ scale: 1.1, y: -2 }}
                       whileTap={{ scale: 0.95 }}
-                      title={isVideoOff ? 'Р’РєР»СЋС‡РёС‚СЊ РєР°РјРµСЂСѓ' : 'Р’С‹РєР»СЋС‡РёС‚СЊ РєР°РјРµСЂСѓ'}
+                      title={isVideoOff ? 'Включить камеру' : 'Выключить камеру'}
                     >
                       {isVideoOff ? <VideoOff size={24} /> : <Video size={24} />}
                     </motion.button>
@@ -770,7 +814,7 @@ export const CallModal = ({
                       onClick={toggleScreenShare}
                       whileHover={{ scale: 1.1, y: -2 }}
                       whileTap={{ scale: 0.95 }}
-                      title={isScreenSharing ? 'РћСЃС‚Р°РЅРѕРІРёС‚СЊ РґРµРјРѕРЅСЃС‚СЂР°С†РёСЋ' : 'Р”РµРјРѕРЅСЃС‚СЂР°С†РёСЏ СЌРєСЂР°РЅР°'}
+                      title={isScreenSharing ? 'Остановить демонстрацию' : 'Демонстрация экрана'}
                     >
                       {isScreenSharing ? <MonitorOff size={24} /> : <Monitor size={24} />}
                     </motion.button>
@@ -782,7 +826,7 @@ export const CallModal = ({
                   onClick={toggleSpeaker}
                   whileHover={{ scale: 1.1, y: -2 }}
                   whileTap={{ scale: 0.95 }}
-                  title={isSpeakerOff ? 'Р’РєР»СЋС‡РёС‚СЊ Р·РІСѓРє' : 'Р’С‹РєР»СЋС‡РёС‚СЊ Р·РІСѓРє'}
+                  title={isSpeakerOff ? 'Включить звук' : 'Выключить звук'}
                 >
                   {isSpeakerOff ? <VolumeX size={24} /> : <Volume2 size={24} />}
                 </motion.button>
@@ -793,7 +837,7 @@ export const CallModal = ({
                 onClick={() => endCall(true)}
                 whileHover={{ scale: 1.1, rotate: 135 }}
                 whileTap={{ scale: 0.95 }}
-                title="Р—Р°РІРµСЂС€РёС‚СЊ Р·РІРѕРЅРѕРє"
+                title="Завершить звонок"
               >
                 <PhoneOff size={28} />
               </motion.button>
