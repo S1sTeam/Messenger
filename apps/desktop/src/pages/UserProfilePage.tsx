@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { User, ArrowLeft, MessageCircle, Heart } from 'lucide-react';
+import { ArrowLeft, Heart, MessageCircle } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import styles from './UserProfilePage.module.css';
 
@@ -35,42 +35,50 @@ export const UserProfilePage = () => {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
   const currentUser = useAuthStore((state) => state.user);
+  const token = useAuthStore((state) => state.token);
+
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [posts, setPosts] = useState<UserPost[]>([]);
   const [followStatus, setFollowStatus] = useState<FollowStatus>({
     isFollowing: false,
     followersCount: 0,
-    followingCount: 0
+    followingCount: 0,
   });
   const [loading, setLoading] = useState(true);
+  const [updatingFollow, setUpdatingFollow] = useState(false);
+  const [openingChat, setOpeningChat] = useState(false);
 
   useEffect(() => {
-    loadUserProfile();
-    loadUserPosts();
-    loadFollowStatus();
-  }, [userId]);
+    if (!token || !userId) {
+      return;
+    }
+
+    void loadUserProfile();
+    void loadUserPosts();
+    void loadFollowStatus();
+  }, [token, userId]);
+
+  const authHeaders: Record<string, string> | undefined = token
+    ? {
+        Authorization: `Bearer ${token}`,
+      }
+    : undefined;
 
   const loadUserProfile = async () => {
+    if (!userId) return;
+
     setLoading(true);
     try {
-      const authStorage = localStorage.getItem('auth-storage');
-      if (!authStorage) return;
-      
-      const { state } = JSON.parse(authStorage);
-      const token = state?.token;
-      
-      if (!token) return;
-
       const response = await fetch(`http://localhost:3000/api/users/${userId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        headers: authHeaders,
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        setProfile(data.user);
+      if (!response.ok) {
+        return;
       }
+
+      const data = await response.json();
+      setProfile(data.user);
     } catch (error) {
       console.error('Failed to load user profile:', error);
     } finally {
@@ -79,82 +87,102 @@ export const UserProfilePage = () => {
   };
 
   const loadUserPosts = async () => {
-    try {
-      const authStorage = localStorage.getItem('auth-storage');
-      if (!authStorage) return;
-      
-      const { state } = JSON.parse(authStorage);
-      const token = state?.token;
-      
-      if (!token) return;
+    if (!userId) return;
 
+    try {
       const response = await fetch(`http://localhost:3000/api/users/${userId}/posts`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        headers: authHeaders,
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        setPosts(data.posts || []);
+      if (!response.ok) {
+        return;
       }
+
+      const data = await response.json();
+      setPosts(data.posts || []);
     } catch (error) {
       console.error('Failed to load user posts:', error);
     }
   };
 
   const loadFollowStatus = async () => {
-    try {
-      const authStorage = localStorage.getItem('auth-storage');
-      if (!authStorage) return;
-      
-      const { state } = JSON.parse(authStorage);
-      const token = state?.token;
-      
-      if (!token) return;
+    if (!userId) return;
 
+    try {
       const response = await fetch(`http://localhost:3000/api/users/${userId}/follow-status`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        headers: authHeaders,
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        setFollowStatus(data);
+      if (!response.ok) {
+        return;
       }
+
+      const data = await response.json();
+      setFollowStatus(data);
     } catch (error) {
       console.error('Failed to load follow status:', error);
     }
   };
 
   const handleFollow = async () => {
-    try {
-      const authStorage = localStorage.getItem('auth-storage');
-      if (!authStorage) return;
-      
-      const { state } = JSON.parse(authStorage);
-      const token = state?.token;
-      
-      if (!token) return;
+    if (!userId || updatingFollow) return;
 
+    setUpdatingFollow(true);
+    try {
       const response = await fetch(`http://localhost:3000/api/users/${userId}/follow`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        headers: authHeaders,
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        setFollowStatus(prev => ({
-          ...prev,
-          isFollowing: data.isFollowing,
-          followersCount: prev.followersCount + (data.isFollowing ? 1 : -1)
-        }));
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        alert(data.error || 'Не удалось обновить подписку');
+        return;
       }
+
+      setFollowStatus((prev) => ({
+        isFollowing: Boolean(data.isFollowing),
+        followersCount:
+          typeof data.followersCount === 'number'
+            ? data.followersCount
+            : prev.followersCount + (data.isFollowing ? 1 : -1),
+        followingCount:
+          typeof data.followingCount === 'number' ? data.followingCount : prev.followingCount,
+      }));
     } catch (error) {
       console.error('Failed to follow/unfollow:', error);
+      alert('Не удалось обновить подписку');
+    } finally {
+      setUpdatingFollow(false);
+    }
+  };
+
+  const handleStartChat = async () => {
+    if (!userId || !token || openingChat) return;
+
+    setOpeningChat(true);
+    try {
+      const response = await fetch('http://localhost:3000/api/chats', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ userId }),
+      });
+
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data?.chat?.id) {
+        alert(data.error || 'Не удалось открыть чат');
+        return;
+      }
+
+      navigate(`/chats?chatId=${data.chat.id}`);
+    } catch (error) {
+      console.error('Failed to open direct chat:', error);
+      alert('Не удалось открыть чат');
+    } finally {
+      setOpeningChat(false);
     }
   };
 
@@ -177,12 +205,10 @@ export const UserProfilePage = () => {
   }
 
   const firstLetter = profile.displayName?.charAt(0).toUpperCase() || 'U';
-  const colors = [
-    '#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8',
-    '#F7DC6F', '#BB8FCE', '#85C1E2', '#F8B739', '#52B788'
-  ];
+  const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E2', '#F8B739', '#52B788'];
   const colorIndex = firstLetter.charCodeAt(0) % colors.length;
   const avatarColor = colors[colorIndex];
+  const isOwnProfile = currentUser?.id === userId;
 
   return (
     <div className={styles.container}>
@@ -194,23 +220,21 @@ export const UserProfilePage = () => {
       </div>
 
       <div className={styles.profileHeader}>
-        <div 
+        <div
           className={styles.avatar}
-          style={{ 
+          style={{
             background: avatarColor,
             color: 'white',
             fontWeight: 700,
-            fontSize: '48px'
+            fontSize: '48px',
           }}
         >
           {firstLetter}
         </div>
         <h1 className={styles.displayName}>{profile.displayName}</h1>
-        <p className={styles.username}>
-          @{profile.username || `user${profile.id.slice(0, 6)}`}
-        </p>
+        <p className={styles.username}>@{profile.username || `user${profile.id.slice(0, 6)}`}</p>
         {profile.bio && <p className={styles.bio}>{profile.bio}</p>}
-        
+
         <div className={styles.stats}>
           <div className={styles.stat}>
             <span className={styles.statValue}>{posts.length}</span>
@@ -226,15 +250,27 @@ export const UserProfilePage = () => {
           </div>
         </div>
 
-        {currentUser?.id !== userId && (
-          <motion.button
-            className={`${styles.followBtn} ${followStatus.isFollowing ? styles.following : ''}`}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={handleFollow}
-          >
-            {followStatus.isFollowing ? 'Отписаться' : 'Подписаться'}
-          </motion.button>
+        {!isOwnProfile && (
+          <div className={styles.actions}>
+            <motion.button
+              className={`${styles.followBtn} ${followStatus.isFollowing ? styles.following : ''}`}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={handleFollow}
+              disabled={updatingFollow}
+            >
+              {followStatus.isFollowing ? 'Отписаться' : 'Подписаться'}
+            </motion.button>
+            <motion.button
+              className={styles.messageBtn}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={handleStartChat}
+              disabled={openingChat}
+            >
+              {openingChat ? 'Открываем...' : 'Написать в ЛС'}
+            </motion.button>
+          </div>
         )}
       </div>
 
@@ -252,17 +288,13 @@ export const UserProfilePage = () => {
                 <p className={styles.postContent}>{post.content}</p>
                 <div className={styles.postFooter}>
                   <span>
-                    <Heart 
-                      size={16} 
-                      fill={post.isLiked ? 'currentColor' : 'none'}
-                      style={{ color: post.isLiked ? '#f44336' : 'inherit' }}
-                    /> 
+                    <Heart size={16} fill={post.isLiked ? 'currentColor' : 'none'} style={{ color: post.isLiked ? '#f44336' : 'inherit' }} />
                     {post.likes}
                   </span>
-                  <span><MessageCircle size={16} /> {post.comments}</span>
-                  <span className={styles.postDate}>
-                    {new Date(post.createdAt).toLocaleDateString('ru-RU')}
+                  <span>
+                    <MessageCircle size={16} /> {post.comments}
                   </span>
+                  <span className={styles.postDate}>{new Date(post.createdAt).toLocaleDateString('ru-RU')}</span>
                 </div>
               </div>
             ))}

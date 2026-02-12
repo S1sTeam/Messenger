@@ -16,25 +16,17 @@ export const ChatList = ({ selectedChat, onSelectChat }: ChatListProps) => {
   const [showArchive, setShowArchive] = useState(false);
   const chats = useChatStore((state) => state.chats);
   const loadChats = useChatStore((state) => state.loadChats);
-  const initSocket = useChatStore((state) => state.initSocket);
   const isUserOnline = useChatStore((state) => state.isUserOnline);
   const token = useAuthStore((state) => state.token);
   const user = useAuthStore((state) => state.user);
 
   useEffect(() => {
-    console.log('ChatList mounted. Token:', !!token, 'user:', user?.username);
+    console.log('ChatList mounted. Token:', !!token, 'user:', user?.id);
     if (token && user) {
-      console.log('Initializing socket and loading chats...');
-      initSocket(token, user.id);
+      console.log('Loading chats...');
       loadChats();
     }
-    
-    return () => {
-      // Cleanup on unmount
-      const disconnectSocket = useChatStore.getState().disconnectSocket;
-      disconnectSocket();
-    };
-  }, []);
+  }, [token, user?.id, loadChats]);
 
   // Разделяем чаты на категории
   const archivedChats = chats.filter(chat => chat.isArchived);

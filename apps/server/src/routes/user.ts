@@ -4,70 +4,29 @@ import { prisma } from '../db.js';
 
 export const userRouter = Router();
 
-// Поиск пользователей
+// Search users by display name, username or phone.
 userRouter.get('/search', authMiddleware, async (req: AuthRequest, res) => {
   try {
-    const { q } = req.query;
+    const query = typeof req.query.q === 'string' ? req.query.q.trim() : '';
     const userId = req.userId!;
 
-    if (!q || typeof q !== 'string') {
+    if (!query) {
       return res.json({ users: [] });
     }
 
     const users = await prisma.user.findMany({
       where: {
         AND: [
-          {
-            id: {
-              not: userId // Исключаем текущего пользователя
-            }
-          },
+          { id: { not: userId } },
           {
             OR: [
-              {
-                displayName: {
-                  contains: q
-                }
-              },
-              {
-                username: {
-                  contains: q
-                }
-              },
-              {
-                phone: {
-                  contains: q
-                }
-              }
-            ]
-          }
-        ]
+              { displayName: { contains: query } },
+              { username: { contains: query } },
+              { phone: { contains: query } },
+            ],
+          },
+        ],
       },
-      select: {
-        id: true,
-        displayName: true,
-        username: true,
-        phone: true,
-        avatar: true,
-        bio: true
-      },
-      take: 20
-    });
-
-    res.json({ users });
-  } catch (error) {
-    console.error('❌ User search error:', error);
-    res.status(500).json({ error: 'Ошибка поиска пользователей' });
-  }
-});
-
-// Получить профиль пользователя
-userRouter.get('/:userId', authMiddleware, async (req: AuthRequest, res) => {
-  try {
-    const { userId } = req.params;
-
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
       select: {
         id: true,
         displayName: true,
@@ -75,22 +34,18 @@ userRouter.get('/:userId', authMiddleware, async (req: AuthRequest, res) => {
         phone: true,
         avatar: true,
         bio: true,
-        createdAt: true
-      }
+      },
+      take: 20,
     });
 
-    if (!user) {
-      return res.status(404).json({ error: 'Пользователь не найден' });
-    }
-
-    res.json({ user });
+    res.json({ users });
   } catch (error) {
-    console.error('❌ User fetch error:', error);
-    res.status(500).json({ error: 'Ошибка загрузки профиля' });
+    console.error('User search error:', error);
+    res.status(500).json({ error: 'Ошибка поиска пользователей' });
   }
 });
 
-// Получить рекомендуемых пользователей
+// Suggested accounts for feed sidebar.
 userRouter.get('/suggested/list', authMiddleware, async (req: AuthRequest, res) => {
   try {
     const userId = req.userId!;
@@ -98,8 +53,8 @@ userRouter.get('/suggested/list', authMiddleware, async (req: AuthRequest, res) 
     const users = await prisma.user.findMany({
       where: {
         id: {
-          not: userId
-        }
+          not: userId,
+        },
       },
       select: {
         id: true,
@@ -107,34 +62,57 @@ userRouter.get('/suggested/list', authMiddleware, async (req: AuthRequest, res) 
         username: true,
         phone: true,
         avatar: true,
+        followers: {
+          where: {
+            followerId: userId,
+          },
+          select: {
+            id: true,
+          },
+          take: 1,
+        },
         _count: {
           select: {
-            posts: true
-          }
-        }
+            posts: true,
+          },
+        },
       },
       orderBy: {
-        createdAt: 'desc'
+        createdAt: 'desc',
       },
-      take: 10
+      take: 10,
     });
 
-    res.json({ users });
+    const usersWithFollowStatus = users.map((item) => ({
+      id: item.id,
+      displayName: item.displayName,
+      username: item.username,
+      phone: item.phone,
+      avatar: item.avatar,
+      _count: item._count,
+      isFollowing: item.followers.length > 0,
+    }));
+
+    res.json({ users: usersWithFollowStatus });
   } catch (error) {
-    console.error('❌ Suggested users error:', error);
+    console.error('Suggested users error:', error);
     res.status(500).json({ error: 'Ошибка загрузки пользователей' });
   }
 });
 
-// Получить посты пользователя
+// Get posts by user.
 userRouter.get('/:userId/posts', authMiddleware, async (req: AuthRequest, res) => {
   try {
     const { userId } = req.params;
     const currentUserId = req.userId!;
 
+    if (!userId || typeof userId !== 'string') {
+      return res.status(400).json({ error: 'Некорректный userId' });
+    }
+
     const posts = await prisma.post.findMany({
       where: {
-        authorId: userId
+        authorId: userId,
       },
       include: {
         author: {
@@ -142,33 +120,33 @@ userRouter.get('/:userId/posts', authMiddleware, async (req: AuthRequest, res) =
             id: true,
             displayName: true,
             username: true,
-            avatar: true
-          }
+            avatar: true,
+          },
         },
         likes: {
           where: {
-            userId: currentUserId
-          }
+            userId: currentUserId,
+          },
         },
         reposts: {
           where: {
-            userId: currentUserId
-          }
+            userId: currentUserId,
+          },
         },
         _count: {
           select: {
             likes: true,
             reposts: true,
-            comments: true
-          }
-        }
+            comments: true,
+          },
+        },
       },
       orderBy: {
-        createdAt: 'desc'
-      }
+        createdAt: 'desc',
+      },
     });
 
-    const formattedPosts = posts.map(post => ({
+    const formattedPosts = posts.map((post) => ({
       id: post.id,
       authorId: post.authorId,
       authorName: post.author.displayName,
@@ -180,94 +158,167 @@ userRouter.get('/:userId/posts', authMiddleware, async (req: AuthRequest, res) =
       comments: post._count.comments,
       isLiked: post.likes.length > 0,
       isReposted: post.reposts.length > 0,
-      createdAt: post.createdAt
+      createdAt: post.createdAt,
     }));
 
     res.json({ posts: formattedPosts });
   } catch (error) {
-    console.error('❌ User posts error:', error);
+    console.error('User posts error:', error);
     res.status(500).json({ error: 'Ошибка загрузки постов' });
   }
 });
 
-// Подписаться/отписаться от пользователя
+// Follow/unfollow target user.
 userRouter.post('/:userId/follow', authMiddleware, async (req: AuthRequest, res) => {
   try {
     const { userId } = req.params;
     const currentUserId = req.userId!;
 
+    if (!userId || typeof userId !== 'string') {
+      return res.status(400).json({ error: 'Некорректный userId' });
+    }
+
     if (userId === currentUserId) {
       return res.status(400).json({ error: 'Нельзя подписаться на себя' });
     }
 
-    // Проверяем, существует ли подписка
-    const existingFollow = await prisma.follow.findUnique({
-      where: {
-        followerId_followingId: {
-          followerId: currentUserId,
-          followingId: userId
-        }
-      }
+    const targetUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true },
     });
 
+    if (!targetUser) {
+      return res.status(404).json({ error: 'Пользователь не найден' });
+    }
+
+    const existingFollow = await prisma.follow.findFirst({
+      where: {
+        followerId: currentUserId,
+        followingId: userId,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    let isFollowing = false;
     if (existingFollow) {
-      // Отписываемся
       await prisma.follow.delete({
         where: {
-          id: existingFollow.id
-        }
+          id: existingFollow.id,
+        },
       });
-      res.json({ isFollowing: false });
     } else {
-      // Подписываемся
       await prisma.follow.create({
         data: {
           followerId: currentUserId,
-          followingId: userId
-        }
+          followingId: userId,
+        },
       });
-      res.json({ isFollowing: true });
+      isFollowing = true;
     }
+
+    const [followersCount, followingCount] = await Promise.all([
+      prisma.follow.count({
+        where: {
+          followingId: userId,
+        },
+      }),
+      prisma.follow.count({
+        where: {
+          followerId: userId,
+        },
+      }),
+    ]);
+
+    res.json({ isFollowing, followersCount, followingCount });
   } catch (error) {
-    console.error('❌ Follow error:', error);
+    console.error('Follow error:', error);
     res.status(500).json({ error: 'Ошибка подписки' });
   }
 });
 
-// Получить статус подписки и счетчики
+// Follow status + counters for profile.
 userRouter.get('/:userId/follow-status', authMiddleware, async (req: AuthRequest, res) => {
   try {
     const { userId } = req.params;
     const currentUserId = req.userId!;
 
+    if (!userId || typeof userId !== 'string') {
+      return res.status(400).json({ error: 'Некорректный userId' });
+    }
+
+    const targetUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true },
+    });
+
+    if (!targetUser) {
+      return res.status(404).json({ error: 'Пользователь не найден' });
+    }
+
     const [isFollowing, followersCount, followingCount] = await Promise.all([
-      prisma.follow.findUnique({
+      prisma.follow.findFirst({
         where: {
-          followerId_followingId: {
-            followerId: currentUserId,
-            followingId: userId
-          }
-        }
+          followerId: currentUserId,
+          followingId: userId,
+        },
+        select: {
+          id: true,
+        },
       }),
       prisma.follow.count({
         where: {
-          followingId: userId
-        }
+          followingId: userId,
+        },
       }),
       prisma.follow.count({
         where: {
-          followerId: userId
-        }
-      })
+          followerId: userId,
+        },
+      }),
     ]);
 
     res.json({
       isFollowing: !!isFollowing,
       followersCount,
-      followingCount
+      followingCount,
     });
   } catch (error) {
-    console.error('❌ Follow status error:', error);
+    console.error('Follow status error:', error);
     res.status(500).json({ error: 'Ошибка загрузки статуса подписки' });
+  }
+});
+
+// Get user profile.
+userRouter.get('/:userId', authMiddleware, async (req: AuthRequest, res) => {
+  try {
+    const { userId } = req.params;
+
+    if (!userId || typeof userId !== 'string') {
+      return res.status(400).json({ error: 'Некорректный userId' });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        displayName: true,
+        username: true,
+        phone: true,
+        avatar: true,
+        bio: true,
+        createdAt: true,
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'Пользователь не найден' });
+    }
+
+    res.json({ user });
+  } catch (error) {
+    console.error('User fetch error:', error);
+    res.status(500).json({ error: 'Ошибка загрузки профиля' });
   }
 });

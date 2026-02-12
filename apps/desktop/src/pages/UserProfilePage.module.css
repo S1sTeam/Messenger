@@ -113,12 +113,35 @@
 }
 
 .followBtn {
-  margin-top: 8px;
   padding: 9px 18px;
   border-radius: 9px;
   font-size: 13px;
   font-weight: 600;
   min-width: 150px;
+}
+
+.actions {
+  margin-top: 10px;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.messageBtn {
+  padding: 9px 18px;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 600;
+  min-width: 150px;
+  border: 1px solid var(--border);
+  background: var(--surface-soft);
+  color: var(--text-primary);
+}
+
+.messageBtn:hover {
+  background: var(--surface-soft-hover);
+  box-shadow: none;
 }
 
 .followBtn.following,

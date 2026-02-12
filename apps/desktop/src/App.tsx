@@ -6,6 +6,7 @@ import { IncomingCallModal } from './components/IncomingCallModal';
 import { CallModal } from './components/CallModal';
 import { useAuthStore } from './store/authStore';
 import { useChatStore } from './store/chatStore';
+import { toBackendUrl } from './config/network';
 import { setThemeFromDarkMode } from './utils/theme';
 import './styles/global.css';
 
@@ -15,6 +16,8 @@ export const App = () => {
   const token = useAuthStore((state) => state.token);
   const logout = useAuthStore((state) => state.logout);
   const socket = useChatStore((state) => state.socket);
+  const initSocket = useChatStore((state) => state.initSocket);
+  const disconnectSocket = useChatStore((state) => state.disconnectSocket);
   
   const [incomingCall, setIncomingCall] = useState<{
     callerId: string;
@@ -40,11 +43,19 @@ export const App = () => {
   }, [isAuthenticated, user, logout]);
 
   useEffect(() => {
+    if (token && user?.id) {
+      initSocket(token, user.id);
+    } else {
+      disconnectSocket();
+    }
+  }, [token, user?.id, initSocket, disconnectSocket]);
+
+  useEffect(() => {
     const syncTheme = async () => {
       if (!token) return;
 
       try {
-        const response = await fetch('http://localhost:3000/api/settings', {
+        const response = await fetch(toBackendUrl('/api/settings'), {
           headers: {
             Authorization: `Bearer ${token}`,
           },

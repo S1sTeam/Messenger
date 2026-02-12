@@ -1,16 +1,36 @@
-import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Plus } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { useSearchParams } from 'react-router-dom';
 import { ChatList } from '../components/ChatList';
 import { ChatWindow } from '../components/ChatWindow';
 import { NewChatModal } from '../components/NewChatModal';
 import { useAuthStore } from '../store/authStore';
+import { useChatStore } from '../store/chatStore';
 import styles from './ChatsPage.module.css';
 
 export const ChatsPage = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [selectedChat, setSelectedChat] = useState<string | null>(null);
   const [isNewChatModalOpen, setIsNewChatModalOpen] = useState(false);
   const token = useAuthStore((state) => state.token);
+  const loadChats = useChatStore((state) => state.loadChats);
+
+  useEffect(() => {
+    const chatId = searchParams.get('chatId');
+    if (chatId) {
+      setSelectedChat(chatId);
+    }
+  }, [searchParams]);
+
+  const selectChat = (chatId: string | null) => {
+    setSelectedChat(chatId);
+
+    if (chatId) {
+      setSearchParams({ chatId });
+    } else {
+      setSearchParams({});
+    }
+  };
 
   const handleCreateChat = async (userId: string) => {
     try {
@@ -18,19 +38,23 @@ export const ChatsPage = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ userId })
+        body: JSON.stringify({ userId }),
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        setSelectedChat(data.chat.id);
-        // Обновляем список чатов
-        window.location.reload();
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        alert(error.error || 'Не удалось открыть чат');
+        return;
       }
+
+      const data = await response.json();
+      await loadChats();
+      selectChat(data.chat.id);
     } catch (error) {
       console.error('Failed to create chat:', error);
+      alert('Не удалось открыть чат');
     }
   };
 
@@ -49,19 +73,12 @@ export const ChatsPage = () => {
             <span style={{ fontSize: '20px', fontWeight: 'bold', color: '#999', lineHeight: '1' }}>+</span>
           </motion.button>
         </div>
-        <ChatList 
-          selectedChat={selectedChat} 
-          onSelectChat={setSelectedChat} 
-        />
+        <ChatList selectedChat={selectedChat} onSelectChat={(chatId) => selectChat(chatId)} />
       </div>
-      
+
       <AnimatePresence mode="wait">
         {selectedChat ? (
-          <ChatWindow 
-            key={selectedChat} 
-            chatId={selectedChat}
-            onChatDeleted={() => setSelectedChat(null)}
-          />
+          <ChatWindow key={selectedChat} chatId={selectedChat} onChatDeleted={() => selectChat(null)} />
         ) : (
           <motion.div
             key="empty"

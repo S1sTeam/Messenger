@@ -28,6 +28,7 @@ interface Chat {
 
 interface ChatState {
   socket: Socket | null;
+  socketUserId: string | null;
   chats: Chat[];
   messages: Record<string, Message[]>;
   currentChat: string | null;
@@ -47,6 +48,7 @@ interface ChatState {
 
 export const useChatStore = create<ChatState>((set, get) => ({
   socket: null,
+  socketUserId: null,
   chats: [],
   messages: {},
   currentChat: null,
@@ -54,6 +56,16 @@ export const useChatStore = create<ChatState>((set, get) => ({
   onlineUsers: new Set<string>(),
 
   initSocket: (token: string, userId: string) => {
+    const { socket: existingSocket, socketUserId } = get();
+
+    if (existingSocket && socketUserId === userId && existingSocket.connected) {
+      return;
+    }
+
+    if (existingSocket) {
+      existingSocket.disconnect();
+    }
+
     console.log('Initializing socket for user:', userId);
     const socket = io(SOCKET_ORIGIN, {
       auth: { token },
@@ -150,14 +162,14 @@ export const useChatStore = create<ChatState>((set, get) => ({
       set({ onlineUsers: new Set(userIds) });
     });
 
-    set({ socket });
+    set({ socket, socketUserId: userId });
   },
 
   disconnectSocket: () => {
     const { socket } = get();
     if (socket) {
       socket.disconnect();
-      set({ socket: null });
+      set({ socket: null, socketUserId: null, onlineUsers: new Set<string>() });
     }
   },
 
@@ -264,14 +276,27 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   createChat: async (userId: string) => {
     try {
+      const authStorage = localStorage.getItem('auth-storage');
+      if (!authStorage) return;
+
+      const { state } = JSON.parse(authStorage);
+      const token = state?.token;
+      if (!token) return;
+
       const response = await fetch('http://localhost:3000/api/chats', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
         body: JSON.stringify({ userId })
       });
+      if (!response.ok) {
+        return;
+      }
       const data = await response.json();
       set((state) => ({
-        chats: [...state.chats, data.chat]
+        chats: state.chats.some((chat) => chat.id === data.chat.id) ? state.chats : [...state.chats, data.chat]
       }));
     } catch (error) {
       console.error('Failed to create chat:', error);

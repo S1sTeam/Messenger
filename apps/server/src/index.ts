@@ -13,6 +13,7 @@ import { settingsRouter } from './routes/settings.js';
 import { userRouter } from './routes/user.js';
 import uploadRouter from './routes/upload.js';
 import { setupSocketHandlers } from './socket/index.js';
+import { prepareDatabasePerformance } from './db.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -29,7 +30,7 @@ const defaultCorsOrigins = [
   'http://localhost:5175',
   'tauri://localhost',
   'http://tauri.localhost',
-  'https://tauri.localhost'
+  'https://tauri.localhost',
 ];
 
 const envCorsOrigins = (process.env.CORS_ORIGINS || process.env.ALLOWED_ORIGINS || '')
@@ -44,21 +45,21 @@ const io = new Server(httpServer, {
   cors: {
     origin: corsOrigins,
     credentials: true,
-    methods: corsMethods
-  }
+    methods: corsMethods,
+  },
 });
 
-app.use(cors({
-  origin: corsOrigins,
-  credentials: true,
-  methods: corsMethods
-}));
+app.use(
+  cors({
+    origin: corsOrigins,
+    credentials: true,
+    methods: corsMethods,
+  })
+);
 app.use(express.json());
 
-// Статические файлы для загрузок
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
-// Routes
 app.use('/api/auth', authRouter);
 app.use('/api/chats', chatRouter);
 app.use('/api/posts', postRouter);
@@ -66,15 +67,22 @@ app.use('/api/settings', settingsRouter);
 app.use('/api/users', userRouter);
 app.use('/api/upload', uploadRouter);
 
-app.get('/health', (req, res) => {
+app.get('/health', (_req, res) => {
   res.json({ status: 'ok' });
 });
 
-// Socket.io
 setupSocketHandlers(io);
 
 const PORT = process.env.PORT || 3000;
 
-httpServer.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+const start = async () => {
+  await prepareDatabasePerformance();
+  httpServer.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+};
+
+start().catch((error) => {
+  console.error('Failed to start server:', error);
+  process.exit(1);
 });

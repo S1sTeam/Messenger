@@ -21,18 +21,28 @@ postRouter.get('/feed', authMiddleware, async (req: AuthRequest, res) => {
           }
         },
         likes: {
-          select: {
-            userId: true
-          }
-        },
-        reposts: {
-          select: {
-            userId: true
-          }
-        },
-        comments: {
+          where: {
+            userId
+          },
           select: {
             id: true
+          },
+          take: 1
+        },
+        reposts: {
+          where: {
+            userId
+          },
+          select: {
+            id: true
+          },
+          take: 1
+        },
+        _count: {
+          select: {
+            likes: true,
+            reposts: true,
+            comments: true
           }
         }
       },
@@ -49,12 +59,12 @@ postRouter.get('/feed', authMiddleware, async (req: AuthRequest, res) => {
       authorAvatar: post.author.avatar || '',
       content: post.content,
       images: post.images ? post.images.split(',').filter(Boolean) : [],
-      comments: post.comments.length,
+      comments: post._count.comments,
       createdAt: post.createdAt,
-      isLiked: post.likes.some(like => like.userId === userId),
-      isReposted: post.reposts.some(repost => repost.userId === userId),
-      likes: post.likes.length,
-      reposts: post.reposts.length
+      isLiked: post.likes.length > 0,
+      isReposted: post.reposts.length > 0,
+      likes: post._count.likes,
+      reposts: post._count.reposts
     }));
     
     console.log('✅ Loaded', postsWithUserData.length, 'posts');

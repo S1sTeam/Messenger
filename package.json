@@ -11,6 +11,6 @@
     "dev:server": "npm run dev --workspace=apps/server",
     "dev:web": "npm run dev --workspace=apps/web",
     "dev:mobile": "npm run start --workspace=apps/mobile",
-    "dev:desktop": "npm run tauri dev --workspace=apps/desktop"
+    "dev:desktop": "npm run tauri --workspace=apps/desktop -- dev"
   }
 }

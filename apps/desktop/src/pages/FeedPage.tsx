@@ -195,6 +195,8 @@ export const FeedPage = () => {
   };
 
   const handleFollowToggle = async (userId: string) => {
+    if (!userId) return;
+
     try {
       const authStorage = localStorage.getItem('auth-storage');
       if (!authStorage) return;
@@ -220,6 +222,9 @@ export const FeedPage = () => {
           }
           return newSet;
         });
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Follow toggle failed:', errorData);
       }
     } catch (error) {
       console.error('Ошибка подписки:', error);
@@ -334,29 +339,13 @@ export const FeedPage = () => {
 
       if (response.ok) {
         const data = await response.json();
-        setSuggestedUsers(data.users || []);
-        
-        // Загружаем статус подписки для каждого пользователя
-        const followStatuses = await Promise.all(
-          data.users.map(async (user: any) => {
-            const statusResponse = await fetch(`http://localhost:3000/api/users/${user.id}/follow-status`, {
-              headers: {
-                'Authorization': `Bearer ${token}`
-              }
-            });
-            if (statusResponse.ok) {
-              const statusData = await statusResponse.json();
-              return { userId: user.id, isFollowing: statusData.isFollowing };
-            }
-            return { userId: user.id, isFollowing: false };
-          })
-        );
-        
-        // Обновляем состояние подписок
+        const users = data.users || [];
+        setSuggestedUsers(users);
+
         const followingSet = new Set<string>();
-        followStatuses.forEach(({ userId, isFollowing }) => {
-          if (isFollowing) {
-            followingSet.add(userId);
+        users.forEach((suggestedUser: any) => {
+          if (suggestedUser.isFollowing) {
+            followingSet.add(suggestedUser.id);
           }
         });
         setFollowingUsers(followingSet);
