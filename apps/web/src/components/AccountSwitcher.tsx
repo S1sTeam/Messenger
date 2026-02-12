@@ -85,6 +85,10 @@ export const AccountSwitcher = () => {
   // Добавить новый аккаунт
   const addNewAccount = () => {
     saveCurrentAccount();
+    if (user?.id) {
+      localStorage.setItem('add-account-return-id', user.id);
+    }
+    localStorage.setItem('add-account-mode', '1');
     setIsOpen(false);
     setIsAddingAccount(false);
     logout();

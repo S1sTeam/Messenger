@@ -1,16 +1,24 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageCircle, AlertCircle, ShieldCheck } from 'lucide-react';
+import { MessageCircle, AlertCircle, ShieldCheck, ArrowLeft } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import styles from './LoginPage.module.css';
 
-type AuthStep = 'phone' | 'verify';
+type AuthStep = 'email' | 'verify';
+type SavedAccount = {
+  id: string;
+  phone: string;
+  displayName: string;
+  token: string;
+};
+
+const ADD_ACCOUNT_MODE_KEY = 'add-account-mode';
+const ADD_ACCOUNT_RETURN_ID_KEY = 'add-account-return-id';
 
 export const LoginPage = () => {
-  const [step, setStep] = useState<AuthStep>('phone');
-  const [phone, setPhone] = useState('');
-  const [telegramChatId, setTelegramChatId] = useState('');
+  const [step, setStep] = useState<AuthStep>('email');
+  const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [error, setError] = useState('');
@@ -19,34 +27,50 @@ export const LoginPage = () => {
   const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
-  const { sendPhoneCode, verifyPhoneCode } = useAuthStore();
+  const { sendEmailCode, verifyEmailCode, setUser } = useAuthStore();
 
-  const formatPhoneNumber = (value: string) => {
-    const cleaned = value.replace(/[^\d+]/g, '');
+  const getSavedAccounts = (): SavedAccount[] => {
+    const raw = localStorage.getItem('saved-accounts');
+    if (!raw) return [];
 
-    if (cleaned.startsWith('8')) {
-      return '+7' + cleaned.slice(1);
+    try {
+      return JSON.parse(raw) as SavedAccount[];
+    } catch {
+      return [];
     }
-
-    if (cleaned.startsWith('7') && !cleaned.startsWith('+')) {
-      return '+' + cleaned;
-    }
-
-    if (!cleaned.startsWith('+') && cleaned.length > 0) {
-      return '+' + cleaned;
-    }
-
-    return cleaned;
   };
 
-  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setPhone(formatPhoneNumber(e.target.value));
+  const getReturnAccount = (): SavedAccount | null => {
+    if (localStorage.getItem(ADD_ACCOUNT_MODE_KEY) !== '1') {
+      return null;
+    }
+
+    const accounts = getSavedAccounts();
+    if (accounts.length === 0) return null;
+
+    const returnId = localStorage.getItem(ADD_ACCOUNT_RETURN_ID_KEY);
+    if (returnId) {
+      const matched = accounts.find((account) => account.id === returnId);
+      if (matched) return matched;
+    }
+
+    return accounts[0];
   };
 
-  const validatePhone = () => {
-    const phoneRegex = /^\+[1-9]\d{10,14}$/;
-    if (!phoneRegex.test(phone)) {
-      setError('Введите корректный номер в формате +79991234567');
+  const [returnAccount] = useState<SavedAccount | null>(() => getReturnAccount());
+  const canCancelAddAccount = returnAccount !== null;
+
+  const clearAddAccountMode = () => {
+    localStorage.removeItem(ADD_ACCOUNT_MODE_KEY);
+    localStorage.removeItem(ADD_ACCOUNT_RETURN_ID_KEY);
+  };
+
+  const normalizeEmail = (value: string) => value.trim().toLowerCase();
+
+  const validateEmail = () => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setError('Введите корректный email, например user@gmail.com');
       return false;
     }
     return true;
@@ -57,19 +81,15 @@ export const LoginPage = () => {
     setHint('');
     setDebugCode('');
 
-    if (!validatePhone()) {
+    if (!validateEmail()) {
       return;
     }
 
     setLoading(true);
     try {
-      const result = await sendPhoneCode(phone, telegramChatId.trim() || undefined);
+      const result = await sendEmailCode(email);
       setStep('verify');
-      setHint(
-        result.provider === 'telegram'
-          ? 'Код отправлен в Telegram. Проверьте чат с ботом.'
-          : 'Код отправлен. Введите 6 цифр из сообщения.'
-      );
+      setHint('Код отправлен на ваш email. Проверьте входящие и спам.');
       if (result.debugCode) {
         setDebugCode(result.debugCode);
       }
@@ -90,7 +110,8 @@ export const LoginPage = () => {
 
     setLoading(true);
     try {
-      await verifyPhoneCode(phone, code.trim(), displayName.trim() || undefined);
+      await verifyEmailCode(email, code.trim(), displayName.trim() || undefined);
+      clearAddAccountMode();
       navigate('/chats');
     } catch (err: any) {
       setError(err.message || 'Не удалось подтвердить код');
@@ -101,11 +122,31 @@ export const LoginPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (step === 'phone') {
+    if (step === 'email') {
       await handleSendCode();
       return;
     }
     await handleVerifyCode();
+  };
+
+  const handleCancelAddAccount = () => {
+    if (!returnAccount) return;
+
+    setUser(
+      {
+        id: returnAccount.id,
+        phone: returnAccount.phone,
+        email: returnAccount.phone,
+        displayName: returnAccount.displayName,
+        username: undefined,
+        avatar: undefined,
+      },
+      returnAccount.token
+    );
+
+    clearAddAccountMode();
+    navigate('/chats');
+    window.location.reload();
   };
 
   return (
@@ -116,17 +157,30 @@ export const LoginPage = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
+        {canCancelAddAccount && (
+          <motion.button
+            type="button"
+            className={styles.cancelAction}
+            whileHover={{ x: -2 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={handleCancelAddAccount}
+          >
+            <ArrowLeft size={16} />
+            <span>Назад</span>
+          </motion.button>
+        )}
+
         <motion.div
           className={styles.logo}
           animate={{ rotate: [0, 5, -5, 0] }}
           transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
         >
-          {step === 'phone' ? <MessageCircle size={48} /> : <ShieldCheck size={48} />}
+          {step === 'email' ? <MessageCircle size={48} /> : <ShieldCheck size={48} />}
         </motion.div>
 
         <h1 className={styles.title}>Messenger</h1>
         <p className={styles.subtitle}>
-          {step === 'phone' ? 'Вход по номеру телефона' : 'Подтвердите код из SMS'}
+          {step === 'email' ? 'Вход по email' : 'Подтвердите код из письма'}
         </p>
 
         <AnimatePresence mode="wait">
@@ -165,21 +219,12 @@ export const LoginPage = () => {
 
         <form className={styles.form} onSubmit={handleSubmit}>
           <input
-            type="tel"
-            placeholder="Номер телефона (+79991234567)"
-            value={phone}
-            onChange={handlePhoneChange}
+            type="email"
+            placeholder="Email (user@gmail.com)"
+            value={email}
+            onChange={(e) => setEmail(normalizeEmail(e.target.value))}
             className={styles.input}
             required
-            disabled={step === 'verify'}
-          />
-
-          <input
-            type="text"
-            placeholder="Telegram chat id (один раз для привязки)"
-            value={telegramChatId}
-            onChange={(e) => setTelegramChatId(e.target.value)}
-            className={styles.input}
             disabled={step === 'verify'}
           />
 
@@ -187,7 +232,7 @@ export const LoginPage = () => {
             <>
               <input
                 type="text"
-                placeholder="Код из SMS"
+                placeholder="Код из письма"
                 value={code}
                 onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                 className={styles.input}
@@ -213,7 +258,7 @@ export const LoginPage = () => {
           >
             {loading
               ? 'Загрузка...'
-              : step === 'phone'
+              : step === 'email'
                 ? 'Получить код'
                 : 'Подтвердить и войти'}
           </motion.button>
@@ -224,14 +269,14 @@ export const LoginPage = () => {
             <>
               <span
                 onClick={() => {
-                  setStep('phone');
+                  setStep('email');
                   setCode('');
                   setError('');
                   setHint('');
                   setDebugCode('');
                 }}
               >
-                Изменить номер
+                Изменить email
               </span>
               {' • '}
               <span

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Edit2, Mail, Phone, MapPin, User, Calendar, Link as LinkIcon, Settings } from 'lucide-react';
+import { Edit2, Mail, MapPin, User, Calendar, Link as LinkIcon, Settings } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useNavigate } from 'react-router-dom';
 import styles from './ProfilePage.module.css';
@@ -86,11 +86,11 @@ export const ProfilePage = () => {
           <div className={styles.details}>
             <div className={styles.detail}>
               <Mail size={18} />
-              <span>{user?.username}@messenger.com</span>
+              <span>{user?.email || user?.phone || 'email@example.com'}</span>
             </div>
             <div className={styles.detail}>
-              <Phone size={18} />
-              <span>+7 (999) 123-45-67</span>
+              <User size={18} />
+              <span>@{user?.username || 'username'}</span>
             </div>
             <div className={styles.detail}>
               <MapPin size={18} />

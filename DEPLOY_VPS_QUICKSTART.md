@@ -30,21 +30,11 @@ DATABASE_URL=file:./prisma/dev.db
 JWT_SECRET=change-this-secret
 CORS_ORIGINS=https://your-domain.com,http://your-vps-ip
 
-# SMS provider for real phone auth
-SMS_PROVIDER=twilio
-TWILIO_ACCOUNT_SID=ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-TWILIO_AUTH_TOKEN=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-TWILIO_FROM_NUMBER=+1xxxxxxxxxx
-
-# Free test option (limited):
-# SMS_PROVIDER=textbelt
-# TEXTBELT_KEY=textbelt
-
-# Telegram bot option:
-# SMS_PROVIDER=telegram
-# TELEGRAM_BOT_TOKEN=1234567890:AAxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-# TELEGRAM_CHAT_ID=123456789
-# If TELEGRAM_CHAT_ID is omitted, each user can bind personal chat id in login form.
+# Email auth via Gmail app password
+EMAIL_PROVIDER=gmail
+GMAIL_USER=your@gmail.com
+GMAIL_APP_PASSWORD=your-16-char-app-password
+# EMAIL_FROM=your@gmail.com
 ```
 
 ## 4) Database
@@ -134,5 +124,5 @@ sudo ufw allow 443
 ## 9) Verify from another device
 
 1. Open `http://your-domain.com` (or VPS IP).
-2. Login by phone number and SMS code from another device.
+2. Login by email and one-time code from another device.
 3. Send message and check that `/api` and `/socket.io` work.

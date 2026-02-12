@@ -1,8 +1,10 @@
 ﻿import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { toBackendUrl } from '../config/network';
 
 interface User {
   id: string;
+  email?: string;
   phone: string;
   username?: string;
   displayName: string;
@@ -10,7 +12,7 @@ interface User {
 }
 
 interface SendCodeResult {
-  provider: 'twilio' | 'textbelt' | 'telegram' | 'mock';
+  provider: 'gmail' | 'smtp' | 'mock';
   expiresInSeconds: number;
   debugCode?: string;
 }
@@ -23,16 +25,16 @@ interface AuthState {
   user: User | null;
   token: string | null;
   isAuthenticated: boolean;
-  login: (phone: string, password: string) => Promise<void>;
-  register: (phone: string, password: string, displayName: string) => Promise<void>;
-  sendPhoneCode: (phone: string, telegramChatId?: string) => Promise<SendCodeResult>;
-  verifyPhoneCode: (phone: string, code: string, displayName?: string) => Promise<VerifyCodeResult>;
+  login: (email: string, password: string) => Promise<void>;
+  register: (email: string, password: string, displayName: string) => Promise<void>;
+  sendEmailCode: (email: string) => Promise<SendCodeResult>;
+  verifyEmailCode: (email: string, code: string, displayName?: string) => Promise<VerifyCodeResult>;
   logout: () => void;
   setUser: (user: User, token: string) => void;
 }
 
 const postJson = async (url: string, body: Record<string, unknown>) => {
-  const response = await fetch(url, {
+  const response = await fetch(toBackendUrl(url), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
@@ -53,8 +55,8 @@ export const useAuthStore = create<AuthState>()(
       token: null,
       isAuthenticated: false,
 
-      login: async (phone: string, password: string) => {
-        const data = await postJson('http://localhost:3000/api/auth/login', { phone, password });
+      login: async (email: string, password: string) => {
+        const data = await postJson('http://localhost:3000/api/auth/login', { email, password });
         set({
           user: data.user,
           token: data.token,
@@ -62,8 +64,8 @@ export const useAuthStore = create<AuthState>()(
         });
       },
 
-      register: async (phone: string, password: string, displayName: string) => {
-        const data = await postJson('http://localhost:3000/api/auth/register', { phone, password, displayName });
+      register: async (email: string, password: string, displayName: string) => {
+        const data = await postJson('http://localhost:3000/api/auth/register', { email, password, displayName });
         set({
           user: data.user,
           token: data.token,
@@ -71,11 +73,8 @@ export const useAuthStore = create<AuthState>()(
         });
       },
 
-      sendPhoneCode: async (phone: string, telegramChatId?: string) => {
-        const data = await postJson('http://localhost:3000/api/auth/send-code', {
-          phone,
-          telegramChatId,
-        });
+      sendEmailCode: async (email: string) => {
+        const data = await postJson('http://localhost:3000/api/auth/send-code', { email });
         return {
           provider: data.provider,
           expiresInSeconds: data.expiresInSeconds,
@@ -83,9 +82,9 @@ export const useAuthStore = create<AuthState>()(
         } as SendCodeResult;
       },
 
-      verifyPhoneCode: async (phone: string, code: string, displayName?: string) => {
+      verifyEmailCode: async (email: string, code: string, displayName?: string) => {
         const data = await postJson('http://localhost:3000/api/auth/verify-code', {
-          phone,
+          email,
           code,
           displayName,
         });

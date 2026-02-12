@@ -7,6 +7,7 @@
 }
 
 .card {
+  position: relative;
   background: var(--bg-secondary);
   border: 1px solid var(--border);
   border-radius: 20px;
@@ -14,6 +15,29 @@
   width: 100%;
   max-width: 420px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.cancelAction {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 8px;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.cancelAction:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
 }
 
 .logo {
