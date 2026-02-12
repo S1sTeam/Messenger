@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Phone, Video, Mic, MicOff, VideoOff, PhoneOff, Volume2, VolumeX, Monitor, MonitorOff } from 'lucide-react';
 import { useChatStore } from '../store/chatStore';
+import { ICE_SERVERS } from '../config/network';
 import styles from './CallModal.module.css';
 
 interface CallModalProps {
@@ -66,10 +67,7 @@ export const CallModal = ({ isOpen, callType, recipientName, recipientId, onClos
 
   // WebRTC конфигурация
   const rtcConfiguration = {
-    iceServers: [
-      { urls: 'stun:stun.l.google.com:19302' },
-      { urls: 'stun:stun1.l.google.com:19302' }
-    ]
+    iceServers: ICE_SERVERS,
   };
 
   // Инициализация медиа потоков
