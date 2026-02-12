@@ -1,4 +1,4 @@
-import { create } from 'zustand';
+﻿import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 interface User {
@@ -9,15 +9,42 @@ interface User {
   avatar?: string;
 }
 
+interface SendCodeResult {
+  provider: 'twilio' | 'mock';
+  expiresInSeconds: number;
+  debugCode?: string;
+}
+
+interface VerifyCodeResult {
+  isNewUser: boolean;
+}
+
 interface AuthState {
   user: User | null;
   token: string | null;
   isAuthenticated: boolean;
   login: (phone: string, password: string) => Promise<void>;
   register: (phone: string, password: string, displayName: string) => Promise<void>;
+  sendPhoneCode: (phone: string) => Promise<SendCodeResult>;
+  verifyPhoneCode: (phone: string, code: string, displayName?: string) => Promise<VerifyCodeResult>;
   logout: () => void;
   setUser: (user: User, token: string) => void;
 }
+
+const postJson = async (url: string, body: Record<string, unknown>) => {
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload.error || 'Request failed');
+  }
+
+  return payload;
+};
 
 export const useAuthStore = create<AuthState>()(
   persist(
@@ -27,69 +54,48 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: false,
 
       login: async (phone: string, password: string) => {
-        try {
-          console.log('Attempting login...', { phone });
-          const response = await fetch('http://localhost:3000/api/auth/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ phone, password }),
-          });
-
-          console.log('Login response:', response.status);
-
-          if (!response.ok) {
-            const errorData = await response.json();
-            console.error('Login error:', errorData);
-            
-            // Если ошибка токена, очищаем старые данные
-            if (response.status === 401) {
-              set({ user: null, token: null, isAuthenticated: false });
-            }
-            
-            throw new Error(errorData.error || 'Ошибка входа');
-          }
-
-          const data = await response.json();
-          console.log('Login success:', data);
-          set({
-            user: data.user,
-            token: data.token,
-            isAuthenticated: true,
-          });
-        } catch (error) {
-          console.error('Login exception:', error);
-          throw error;
-        }
+        const data = await postJson('http://localhost:3000/api/auth/login', { phone, password });
+        set({
+          user: data.user,
+          token: data.token,
+          isAuthenticated: true,
+        });
       },
 
       register: async (phone: string, password: string, displayName: string) => {
-        try {
-          console.log('Attempting registration...', { phone, displayName });
-          const response = await fetch('http://localhost:3000/api/auth/register', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ phone, password, displayName }),
-          });
+        const data = await postJson('http://localhost:3000/api/auth/register', { phone, password, displayName });
+        set({
+          user: data.user,
+          token: data.token,
+          isAuthenticated: true,
+        });
+      },
 
-          console.log('Register response:', response.status);
+      sendPhoneCode: async (phone: string) => {
+        const data = await postJson('http://localhost:3000/api/auth/send-code', { phone });
+        return {
+          provider: data.provider,
+          expiresInSeconds: data.expiresInSeconds,
+          debugCode: data.debugCode,
+        } as SendCodeResult;
+      },
 
-          if (!response.ok) {
-            const errorData = await response.json();
-            console.error('Register error:', errorData);
-            throw new Error(errorData.error || 'Ошибка регистрации');
-          }
+      verifyPhoneCode: async (phone: string, code: string, displayName?: string) => {
+        const data = await postJson('http://localhost:3000/api/auth/verify-code', {
+          phone,
+          code,
+          displayName,
+        });
 
-          const data = await response.json();
-          console.log('Register success:', data);
-          set({
-            user: data.user,
-            token: data.token,
-            isAuthenticated: true,
-          });
-        } catch (error) {
-          console.error('Register exception:', error);
-          throw error;
-        }
+        set({
+          user: data.user,
+          token: data.token,
+          isAuthenticated: true,
+        });
+
+        return {
+          isNewUser: Boolean(data.isNewUser),
+        };
       },
 
       logout: () => {

@@ -29,6 +29,12 @@ NODE_ENV=production
 DATABASE_URL=file:./prisma/dev.db
 JWT_SECRET=change-this-secret
 CORS_ORIGINS=https://your-domain.com,http://your-vps-ip
+
+# SMS provider for real phone auth
+SMS_PROVIDER=twilio
+TWILIO_ACCOUNT_SID=ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+TWILIO_AUTH_TOKEN=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+TWILIO_FROM_NUMBER=+1xxxxxxxxxx
 ```
 
 ## 4) Database
@@ -118,6 +124,5 @@ sudo ufw allow 443
 ## 9) Verify from another device
 
 1. Open `http://your-domain.com` (or VPS IP).
-2. Register/login from phone or another PC.
+2. Login by phone number and SMS code from another device.
 3. Send message and check that `/api` and `/socket.io` work.
-

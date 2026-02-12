@@ -1,99 +1,127 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageCircle, AlertCircle } from 'lucide-react';
+import { MessageCircle, AlertCircle, ShieldCheck } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import styles from './LoginPage.module.css';
 
+type AuthStep = 'phone' | 'verify';
+
 export const LoginPage = () => {
-  const [isLogin, setIsLogin] = useState(true);
+  const [step, setStep] = useState<AuthStep>('phone');
   const [phone, setPhone] = useState('');
-  const [password, setPassword] = useState('');
+  const [code, setCode] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [error, setError] = useState('');
+  const [hint, setHint] = useState('');
+  const [debugCode, setDebugCode] = useState('');
   const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
-  const { login, register } = useAuthStore();
+  const { sendPhoneCode, verifyPhoneCode } = useAuthStore();
 
   const formatPhoneNumber = (value: string) => {
-    // Удаляем все кроме цифр и +
     const cleaned = value.replace(/[^\d+]/g, '');
-    
-    // Если начинается с 8, заменяем на +7
+
     if (cleaned.startsWith('8')) {
       return '+7' + cleaned.slice(1);
     }
-    
-    // Если начинается с 7, добавляем +
+
     if (cleaned.startsWith('7') && !cleaned.startsWith('+')) {
       return '+' + cleaned;
     }
-    
-    // Если нет +, добавляем
+
     if (!cleaned.startsWith('+') && cleaned.length > 0) {
       return '+' + cleaned;
     }
-    
+
     return cleaned;
   };
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatted = formatPhoneNumber(e.target.value);
-    setPhone(formatted);
+    setPhone(formatPhoneNumber(e.target.value));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    
-    // Валидация номера
+  const validatePhone = () => {
     const phoneRegex = /^\+[1-9]\d{10,14}$/;
     if (!phoneRegex.test(phone)) {
-      setError('Введите корректный номер телефона в формате +79991234567');
+      setError('Введите корректный номер в формате +79991234567');
+      return false;
+    }
+    return true;
+  };
+
+  const handleSendCode = async () => {
+    setError('');
+    setHint('');
+    setDebugCode('');
+
+    if (!validatePhone()) {
       return;
     }
-    
-    setLoading(true);
 
+    setLoading(true);
     try {
-      if (isLogin) {
-        await login(phone, password);
-      } else {
-        if (!displayName.trim()) {
-          setError('Введите имя');
-          setLoading(false);
-          return;
-        }
-        await register(phone, password, displayName);
+      const result = await sendPhoneCode(phone);
+      setStep('verify');
+      setHint('Код отправлен. Введите 6 цифр из SMS.');
+      if (result.debugCode) {
+        setDebugCode(result.debugCode);
       }
-      navigate('/chats');
     } catch (err: any) {
-      setError(err.message || (isLogin ? 'Неверный номер или пароль' : 'Ошибка регистрации'));
+      setError(err.message || 'Не удалось отправить код');
     } finally {
       setLoading(false);
     }
   };
 
+  const handleVerifyCode = async () => {
+    setError('');
+
+    if (!/^\d{6}$/.test(code.trim())) {
+      setError('Введите 6-значный код');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await verifyPhoneCode(phone, code.trim(), displayName.trim() || undefined);
+      navigate('/chats');
+    } catch (err: any) {
+      setError(err.message || 'Не удалось подтвердить код');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (step === 'phone') {
+      await handleSendCode();
+      return;
+    }
+    await handleVerifyCode();
+  };
+
   return (
     <div className={styles.container}>
-      <motion.div 
+      <motion.div
         className={styles.card}
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <motion.div 
+        <motion.div
           className={styles.logo}
           animate={{ rotate: [0, 5, -5, 0] }}
           transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
         >
-          <MessageCircle size={48} />
+          {step === 'phone' ? <MessageCircle size={48} /> : <ShieldCheck size={48} />}
         </motion.div>
-        
+
         <h1 className={styles.title}>Messenger</h1>
         <p className={styles.subtitle}>
-          {isLogin ? 'Войдите в свой аккаунт' : 'Создайте новый аккаунт'}
+          {step === 'phone' ? 'Вход по номеру телефона' : 'Подтвердите код из SMS'}
         </p>
 
         <AnimatePresence mode="wait">
@@ -110,41 +138,57 @@ export const LoginPage = () => {
           )}
         </AnimatePresence>
 
+        <AnimatePresence mode="wait">
+          {hint && !error && (
+            <motion.div
+              className={styles.switch}
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              style={{ marginTop: 0, marginBottom: 12 }}
+            >
+              {hint}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {debugCode && (
+          <div className={styles.switch} style={{ marginTop: 0, marginBottom: 12 }}>
+            Debug code: <strong>{debugCode}</strong>
+          </div>
+        )}
+
         <form className={styles.form} onSubmit={handleSubmit}>
-          <AnimatePresence mode="wait">
-            {!isLogin && (
-              <motion.input
-                key="displayName"
-                initial={{ opacity: 0, height: 0, marginBottom: 0 }}
-                animate={{ opacity: 1, height: 'auto', marginBottom: 16 }}
-                exit={{ opacity: 0, height: 0, marginBottom: 0 }}
-                type="text"
-                placeholder="Имя"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                className={styles.input}
-                required={!isLogin}
-              />
-            )}
-          </AnimatePresence>
-          
           <input
             type="tel"
-            placeholder="Номер телефона (79991234567)"
+            placeholder="Номер телефона (+79991234567)"
             value={phone}
             onChange={handlePhoneChange}
             className={styles.input}
             required
+            disabled={step === 'verify'}
           />
-          
-          <input
-            type="password"
-            placeholder="Пароль"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className={styles.input}
-            required
-          />
+
+          {step === 'verify' && (
+            <>
+              <input
+                type="text"
+                placeholder="Код из SMS"
+                value={code}
+                onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                className={styles.input}
+                inputMode="numeric"
+                required
+              />
+              <input
+                type="text"
+                placeholder="Имя (для нового аккаунта)"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                className={styles.input}
+              />
+            </>
+          )}
 
           <motion.button
             type="submit"
@@ -153,19 +197,41 @@ export const LoginPage = () => {
             whileTap={{ scale: loading ? 1 : 0.98 }}
             disabled={loading}
           >
-            {loading ? 'Загрузка...' : (isLogin ? 'Войти' : 'Зарегистрироваться')}
+            {loading
+              ? 'Загрузка...'
+              : step === 'phone'
+                ? 'Получить код'
+                : 'Подтвердить и войти'}
           </motion.button>
         </form>
 
-        <p className={styles.switch}>
-          {isLogin ? 'Нет аккаунта?' : 'Уже есть аккаунт?'}
-          <span onClick={() => {
-            setIsLogin(!isLogin);
-            setError('');
-          }}>
-            {isLogin ? ' Зарегистрироваться' : ' Войти'}
-          </span>
-        </p>
+        <div className={styles.switch}>
+          {step === 'verify' ? (
+            <>
+              <span
+                onClick={() => {
+                  setStep('phone');
+                  setCode('');
+                  setError('');
+                  setHint('');
+                  setDebugCode('');
+                }}
+              >
+                Изменить номер
+              </span>
+              {' • '}
+              <span
+                onClick={() => {
+                  handleSendCode();
+                }}
+              >
+                Отправить код еще раз
+              </span>
+            </>
+          ) : (
+            'После подтверждения кода аккаунт создастся автоматически'
+          )}
+        </div>
       </motion.div>
     </div>
   );

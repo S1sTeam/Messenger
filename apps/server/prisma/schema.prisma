@@ -160,3 +160,13 @@ model MissedCall {
   caller      User     @relation("CallerCalls", fields: [callerId], references: [id], onDelete: Cascade)
   recipient   User     @relation("RecipientCalls", fields: [recipientId], references: [id], onDelete: Cascade)
 }
+
+model PhoneVerification {
+  id        String   @id @default(uuid())
+  phone     String   @unique
+  codeHash  String
+  expiresAt DateTime
+  attempts  Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

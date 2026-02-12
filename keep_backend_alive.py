@@ -13,11 +13,11 @@ import signal
 import subprocess
 import sys
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 # ---- EDIT THESE VALUES FOR YOUR VPS ----
-PROJECT_DIR = Path("/home/ubuntu/messenger")
+PROJECT_DIR = Path(__file__).resolve().parent
 PORT = "3000"
 CORS_ORIGINS = "http://YOUR_SERVER_IP:8080,https://YOUR_DOMAIN"
 # ----------------------------------------
@@ -35,7 +35,7 @@ child_process: subprocess.Popen[bytes] | None = None
 
 
 def now_utc() -> str:
-    return datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+    return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
 
 
 def log(message: str) -> None:
