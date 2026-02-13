@@ -1,8 +1,10 @@
-import { create } from 'zustand';
+﻿import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { toBackendUrl } from '../config/network';
 
 interface User {
   id: string;
+  email?: string;
   phone: string;
   username?: string;
   displayName: string;
@@ -13,8 +15,8 @@ interface AuthState {
   user: User | null;
   token: string | null;
   isAuthenticated: boolean;
-  login: (phone: string, password: string) => Promise<void>;
-  register: (phone: string, password: string, displayName: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
+  register: (email: string, password: string, displayName: string) => Promise<void>;
   logout: () => void;
   setUser: (user: User, token: string) => void;
 }
@@ -26,13 +28,13 @@ export const useAuthStore = create<AuthState>()(
       token: null,
       isAuthenticated: false,
 
-      login: async (phone: string, password: string) => {
+      login: async (email: string, password: string) => {
         try {
-          console.log('Attempting login...', { phone });
-          const response = await fetch('http://localhost:3000/api/auth/login', {
+          console.log('Attempting login...', { email });
+          const response = await fetch(toBackendUrl('/api/auth/login'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ phone, password }),
+            body: JSON.stringify({ email, password }),
           });
 
           console.log('Login response:', response.status);
@@ -40,12 +42,11 @@ export const useAuthStore = create<AuthState>()(
           if (!response.ok) {
             const errorData = await response.json();
             console.error('Login error:', errorData);
-            
-            // Если ошибка токена, очищаем старые данные
+
             if (response.status === 401) {
               set({ user: null, token: null, isAuthenticated: false });
             }
-            
+
             throw new Error(errorData.error || 'Ошибка входа');
           }
 
@@ -62,13 +63,13 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      register: async (phone: string, password: string, displayName: string) => {
+      register: async (email: string, password: string, displayName: string) => {
         try {
-          console.log('Attempting registration...', { phone, displayName });
-          const response = await fetch('http://localhost:3000/api/auth/register', {
+          console.log('Attempting registration...', { email, displayName });
+          const response = await fetch(toBackendUrl('/api/auth/register'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ phone, password, displayName }),
+            body: JSON.stringify({ email, password, displayName }),
           });
 
           console.log('Register response:', response.status);

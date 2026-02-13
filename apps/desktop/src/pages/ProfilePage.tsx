@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { CalendarDays, Copy, Edit3, FileText, Hash, Phone, RefreshCw, UserRound } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -32,10 +32,10 @@ interface UserPostPayload {
 }
 
 const formatDate = (value?: string) => {
-  if (!value) return 'Недавно';
+  if (!value) return 'РќРµРґР°РІРЅРѕ';
 
   const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return 'Недавно';
+  if (Number.isNaN(parsed.getTime())) return 'РќРµРґР°РІРЅРѕ';
 
   return new Intl.DateTimeFormat('ru-RU', {
     day: 'numeric',
@@ -139,7 +139,7 @@ export const ProfilePage = () => {
       setProfile(settingsResult.value.user ?? null);
     } else {
       console.error('Failed to load profile settings:', settingsResult.reason);
-      setError('Не удалось загрузить профиль. Проверьте соединение с сервером.');
+      setError('РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ РїСЂРѕС„РёР»СЊ. РџСЂРѕРІРµСЂСЊС‚Рµ СЃРѕРµРґРёРЅРµРЅРёРµ СЃ СЃРµСЂРІРµСЂРѕРј.');
     }
 
     if (followResult.status === 'fulfilled') {
@@ -175,7 +175,7 @@ export const ProfilePage = () => {
       setTimeout(() => setCopied(false), 1500);
     } catch (copyError) {
       console.error('Failed to copy profile link:', copyError);
-      alert('Не удалось скопировать ссылку');
+      alert('РќРµ СѓРґР°Р»РѕСЃСЊ СЃРєРѕРїРёСЂРѕРІР°С‚СЊ СЃСЃС‹Р»РєСѓ');
     }
   };
 
@@ -183,8 +183,8 @@ export const ProfilePage = () => {
     return (
       <div className={styles.container}>
         <div className={styles.errorCard}>
-          <h3>Профиль недоступен</h3>
-          <p>Войдите в аккаунт, чтобы открыть страницу профиля.</p>
+          <h3>РџСЂРѕС„РёР»СЊ РЅРµРґРѕСЃС‚СѓРїРµРЅ</h3>
+          <p>Р’РѕР№РґРёС‚Рµ РІ Р°РєРєР°СѓРЅС‚, С‡С‚РѕР±С‹ РѕС‚РєСЂС‹С‚СЊ СЃС‚СЂР°РЅРёС†Сѓ РїСЂРѕС„РёР»СЏ.</p>
         </div>
       </div>
     );
@@ -193,10 +193,10 @@ export const ProfilePage = () => {
   return (
     <div className={styles.container}>
       <div className={styles.header}>
-        <h2 className={styles.title}>Профиль</h2>
+        <h2 className={styles.title}>РџСЂРѕС„РёР»СЊ</h2>
         <button className={styles.reloadBtn} onClick={() => void loadProfile()} disabled={loading}>
           <RefreshCw size={16} className={loading ? styles.spin : undefined} />
-          Обновить
+          РћР±РЅРѕРІРёС‚СЊ
         </button>
       </div>
 
@@ -214,7 +214,7 @@ export const ProfilePage = () => {
             </div>
             <button className={styles.editBtn} onClick={() => navigate('/settings')}>
               <Edit3 size={14} />
-              Редактировать
+              Р РµРґР°РєС‚РёСЂРѕРІР°С‚СЊ
             </button>
           </div>
 
@@ -222,29 +222,29 @@ export const ProfilePage = () => {
             <h3 className={styles.name}>{resolvedProfile.displayName}</h3>
             <p className={styles.username}>{profileHandle}</p>
             <p className={styles.bio}>
-              {resolvedProfile.bio?.trim() ? resolvedProfile.bio : 'Пока без описания. Добавьте пару слов о себе в настройках.'}
+              {resolvedProfile.bio?.trim() ? resolvedProfile.bio : 'РџРѕРєР° Р±РµР· РѕРїРёСЃР°РЅРёСЏ. Р”РѕР±Р°РІСЊС‚Рµ РїР°СЂСѓ СЃР»РѕРІ Рѕ СЃРµР±Рµ РІ РЅР°СЃС‚СЂРѕР№РєР°С….'}
             </p>
           </div>
 
           <div className={styles.stats}>
             <div className={styles.stat}>
               <div className={styles.statValue}>{postsCount}</div>
-              <div className={styles.statLabel}>Посты</div>
+              <div className={styles.statLabel}>РџРѕСЃС‚С‹</div>
             </div>
             <div className={styles.stat}>
               <div className={styles.statValue}>{followStatus.followersCount}</div>
-              <div className={styles.statLabel}>Подписчики</div>
+              <div className={styles.statLabel}>РџРѕРґРїРёСЃС‡РёРєРё</div>
             </div>
             <div className={styles.stat}>
               <div className={styles.statValue}>{followStatus.followingCount}</div>
-              <div className={styles.statLabel}>Подписки</div>
+              <div className={styles.statLabel}>РџРѕРґРїРёСЃРєРё</div>
             </div>
           </div>
 
           <div className={styles.details}>
             <div className={styles.detail}>
               <UserRound size={16} />
-              <span className={styles.detailLabel}>Ник</span>
+              <span className={styles.detailLabel}>РќРёРє</span>
               <span className={styles.detailValue}>{resolvedProfile.displayName}</span>
             </div>
             <div className={styles.detail}>
@@ -254,12 +254,12 @@ export const ProfilePage = () => {
             </div>
             <div className={styles.detail}>
               <Phone size={16} />
-              <span className={styles.detailLabel}>Телефон</span>
+              <span className={styles.detailLabel}>Email</span>
               <span className={styles.detailValue}>{resolvedProfile.phone}</span>
             </div>
             <div className={styles.detail}>
               <CalendarDays size={16} />
-              <span className={styles.detailLabel}>В профиле с</span>
+              <span className={styles.detailLabel}>Р’ РїСЂРѕС„РёР»Рµ СЃ</span>
               <span className={styles.detailValue}>{formatDate(resolvedProfile.createdAt)}</span>
             </div>
           </div>
@@ -267,11 +267,11 @@ export const ProfilePage = () => {
           <div className={styles.actions}>
             <button className={styles.editProfileBtn} onClick={() => navigate('/settings')}>
               <Edit3 size={16} />
-              Открыть настройки
+              РћС‚РєСЂС‹С‚СЊ РЅР°СЃС‚СЂРѕР№РєРё
             </button>
             <button className={styles.shareBtn} onClick={handleCopyLink}>
               <Copy size={16} />
-              {copied ? 'Ссылка скопирована' : 'Скопировать ссылку'}
+              {copied ? 'РЎСЃС‹Р»РєР° СЃРєРѕРїРёСЂРѕРІР°РЅР°' : 'РЎРєРѕРїРёСЂРѕРІР°С‚СЊ СЃСЃС‹Р»РєСѓ'}
             </button>
           </div>
         </motion.section>
@@ -282,11 +282,11 @@ export const ProfilePage = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.04 }}
         >
-          <h4 className={styles.sectionTitle}>Последние публикации</h4>
+          <h4 className={styles.sectionTitle}>РџРѕСЃР»РµРґРЅРёРµ РїСѓР±Р»РёРєР°С†РёРё</h4>
           {recentPosts.length === 0 ? (
             <div className={styles.emptyState}>
               <FileText size={18} />
-              Публикаций пока нет
+              РџСѓР±Р»РёРєР°С†РёР№ РїРѕРєР° РЅРµС‚
             </div>
           ) : (
             <div className={styles.activityList}>
@@ -295,7 +295,7 @@ export const ProfilePage = () => {
                   <div className={styles.activityContent}>
                     <p className={styles.activityValue}>{post.content}</p>
                     <p className={styles.activityTitle}>
-                      {formatDate(post.createdAt)} • ❤ {post.likes} • 💬 {post.comments} • ↻ {post.reposts}
+                      {formatDate(post.createdAt)} вЂў вќ¤ {post.likes} вЂў рџ’¬ {post.comments} вЂў в†» {post.reposts}
                     </p>
                   </div>
                 </div>
@@ -307,3 +307,4 @@ export const ProfilePage = () => {
     </div>
   );
 };
+
