@@ -28,7 +28,8 @@ settingsRouter.get('/', authMiddleware, async (req: AuthRequest, res) => {
         username: user.username,
         displayName: user.displayName,
         avatar: user.avatar,
-        bio: user.bio
+        bio: user.bio,
+        createdAt: user.createdAt
       },
       settings: user.settings || {
         notifications: true,
@@ -83,7 +84,8 @@ settingsRouter.patch('/profile', authMiddleware, async (req: AuthRequest, res) =
         username: user.username,
         displayName: user.displayName,
         avatar: user.avatar,
-        bio: user.bio
+        bio: user.bio,
+        createdAt: user.createdAt
       }
     });
   } catch (error) {
@@ -186,7 +188,8 @@ settingsRouter.patch('/avatar', authMiddleware, async (req: AuthRequest, res) =>
         username: user.username,
         displayName: user.displayName,
         avatar: user.avatar,
-        bio: user.bio
+        bio: user.bio,
+        createdAt: user.createdAt
       }
     });
   } catch (error) {

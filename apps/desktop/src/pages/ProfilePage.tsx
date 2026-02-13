@@ -1,186 +1,309 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Edit2, Mail, Phone, MapPin, User, Calendar, Link as LinkIcon, Settings } from 'lucide-react';
-import { useAuthStore } from '../store/authStore';
+import { CalendarDays, Copy, Edit3, FileText, Hash, Phone, RefreshCw, UserRound } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { toBackendUrl } from '../config/network';
+import { useAuthStore } from '../store/authStore';
 import styles from './ProfilePage.module.css';
 
+interface SettingsUserPayload {
+  id: string;
+  phone: string;
+  username?: string | null;
+  displayName: string;
+  avatar?: string | null;
+  bio?: string | null;
+  createdAt?: string;
+}
+
+interface FollowStatusPayload {
+  isFollowing: boolean;
+  followersCount: number;
+  followingCount: number;
+}
+
+interface UserPostPayload {
+  id: string;
+  content: string;
+  createdAt: string;
+  likes: number;
+  comments: number;
+  reposts: number;
+}
+
+const formatDate = (value?: string) => {
+  if (!value) return 'Недавно';
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return 'Недавно';
+
+  return new Intl.DateTimeFormat('ru-RU', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  }).format(parsed);
+};
+
 export const ProfilePage = () => {
-  const user = useAuthStore((state) => state.user);
   const navigate = useNavigate();
+  const token = useAuthStore((state) => state.token);
+  const authUser = useAuthStore((state) => state.user);
+
+  const [profile, setProfile] = useState<SettingsUserPayload | null>(null);
+  const [followStatus, setFollowStatus] = useState<FollowStatusPayload>({
+    isFollowing: false,
+    followersCount: 0,
+    followingCount: 0,
+  });
+  const [postsCount, setPostsCount] = useState(0);
+  const [recentPosts, setRecentPosts] = useState<UserPostPayload[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const handleEditProfile = () => {
-    navigate('/settings');
+  const fallbackProfile = useMemo<SettingsUserPayload | null>(() => {
+    if (!authUser) return null;
+
+    return {
+      id: authUser.id,
+      phone: authUser.phone,
+      username: authUser.username ?? null,
+      displayName: authUser.displayName,
+      avatar: authUser.avatar ?? null,
+      bio: null,
+    };
+  }, [authUser]);
+
+  const resolvedProfile = profile ?? fallbackProfile;
+
+  const profileHandle = useMemo(() => {
+    if (!resolvedProfile) return '@user';
+
+    const username = resolvedProfile.username?.trim();
+    if (username) return `@${username}`;
+
+    return `@user${resolvedProfile.id.slice(0, 6)}`;
+  }, [resolvedProfile]);
+
+  const avatarUrl = useMemo(() => {
+    if (!resolvedProfile?.avatar) return null;
+    return toBackendUrl(resolvedProfile.avatar);
+  }, [resolvedProfile?.avatar]);
+
+  const profileInitial = useMemo(() => {
+    const source = resolvedProfile?.displayName?.trim() || resolvedProfile?.username?.trim() || 'U';
+    return source.charAt(0).toUpperCase();
+  }, [resolvedProfile?.displayName, resolvedProfile?.username]);
+
+  const shareLink = useMemo(() => {
+    if (!resolvedProfile) return '';
+    const username = resolvedProfile.username?.trim();
+    return username ? `messenger://user/${username}` : `messenger://id/${resolvedProfile.id}`;
+  }, [resolvedProfile]);
+
+  const loadProfile = async () => {
+    if (!token || !authUser?.id) {
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    const headers = {
+      Authorization: `Bearer ${token}`,
+    };
+
+    const [settingsResult, followResult, postsResult] = await Promise.allSettled([
+      fetch(toBackendUrl('/api/settings'), { headers }).then(async (response) => {
+        if (!response.ok) {
+          throw new Error(`Settings request failed: ${response.status}`);
+        }
+        return (await response.json()) as { user?: SettingsUserPayload };
+      }),
+      fetch(toBackendUrl(`/api/users/${authUser.id}/follow-status`), { headers }).then(async (response) => {
+        if (!response.ok) {
+          throw new Error(`Follow status failed: ${response.status}`);
+        }
+        return (await response.json()) as FollowStatusPayload;
+      }),
+      fetch(toBackendUrl(`/api/users/${authUser.id}/posts`), { headers }).then(async (response) => {
+        if (!response.ok) {
+          throw new Error(`Posts request failed: ${response.status}`);
+        }
+        return (await response.json()) as { posts?: UserPostPayload[] };
+      }),
+    ]);
+
+    if (settingsResult.status === 'fulfilled') {
+      setProfile(settingsResult.value.user ?? null);
+    } else {
+      console.error('Failed to load profile settings:', settingsResult.reason);
+      setError('Не удалось загрузить профиль. Проверьте соединение с сервером.');
+    }
+
+    if (followResult.status === 'fulfilled') {
+      setFollowStatus(followResult.value);
+    } else {
+      console.error('Failed to load follow counters:', followResult.reason);
+    }
+
+    if (postsResult.status === 'fulfilled') {
+      const posts = Array.isArray(postsResult.value.posts) ? postsResult.value.posts : [];
+      setPostsCount(posts.length);
+      setRecentPosts(posts.slice(0, 3));
+    } else {
+      console.error('Failed to load own posts:', postsResult.reason);
+      setPostsCount(0);
+      setRecentPosts([]);
+    }
+
+    setLoading(false);
   };
 
-  const handleShare = () => {
-    const profileUrl = `messenger.app/${user?.username}`;
-    navigator.clipboard.writeText(profileUrl);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  useEffect(() => {
+    void loadProfile();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, authUser?.id]);
+
+  const handleCopyLink = async () => {
+    if (!shareLink) return;
+
+    try {
+      await navigator.clipboard.writeText(shareLink);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch (copyError) {
+      console.error('Failed to copy profile link:', copyError);
+      alert('Не удалось скопировать ссылку');
+    }
   };
+
+  if (!resolvedProfile) {
+    return (
+      <div className={styles.container}>
+        <div className={styles.errorCard}>
+          <h3>Профиль недоступен</h3>
+          <p>Войдите в аккаунт, чтобы открыть страницу профиля.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <motion.div 
-      className={styles.container}
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-    >
+    <div className={styles.container}>
       <div className={styles.header}>
         <h2 className={styles.title}>Профиль</h2>
+        <button className={styles.reloadBtn} onClick={() => void loadProfile()} disabled={loading}>
+          <RefreshCw size={16} className={loading ? styles.spin : undefined} />
+          Обновить
+        </button>
       </div>
 
+      {error && <div className={styles.inlineError}>{error}</div>}
+
       <div className={styles.content}>
-        <motion.div 
-          className={styles.card}
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.1 }}
-        >
+        <motion.section className={styles.card} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
           <div className={styles.avatarSection}>
             <div className={styles.avatarLarge}>
-              <User size={48} strokeWidth={1.5} />
+              {avatarUrl ? (
+                <img src={avatarUrl} alt={resolvedProfile.displayName} className={styles.avatarImage} />
+              ) : (
+                <span className={styles.avatarInitial}>{profileInitial}</span>
+              )}
             </div>
-            <motion.button
-              className={styles.editBtn}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={handleEditProfile}
-            >
-              <Edit2 size={16} />
-              Изменить фото
-            </motion.button>
+            <button className={styles.editBtn} onClick={() => navigate('/settings')}>
+              <Edit3 size={14} />
+              Редактировать
+            </button>
           </div>
 
           <div className={styles.info}>
-            <h3 className={styles.name}>{user?.displayName || 'Пользователь'}</h3>
-            <p className={styles.username}>@{user?.username || 'username'}</p>
-            <p className={styles.bio}>Разработчик | Люблю создавать крутые приложения</p>
+            <h3 className={styles.name}>{resolvedProfile.displayName}</h3>
+            <p className={styles.username}>{profileHandle}</p>
+            <p className={styles.bio}>
+              {resolvedProfile.bio?.trim() ? resolvedProfile.bio : 'Пока без описания. Добавьте пару слов о себе в настройках.'}
+            </p>
           </div>
 
           <div className={styles.stats}>
-            <motion.div 
-              className={styles.stat}
-              whileHover={{ scale: 1.05 }}
-            >
-              <div className={styles.statValue}>142</div>
-              <div className={styles.statLabel}>Подписчики</div>
-            </motion.div>
-            <motion.div 
-              className={styles.stat}
-              whileHover={{ scale: 1.05 }}
-            >
-              <div className={styles.statValue}>89</div>
-              <div className={styles.statLabel}>Подписки</div>
-            </motion.div>
-            <motion.div 
-              className={styles.stat}
-              whileHover={{ scale: 1.05 }}
-            >
-              <div className={styles.statValue}>234</div>
+            <div className={styles.stat}>
+              <div className={styles.statValue}>{postsCount}</div>
               <div className={styles.statLabel}>Посты</div>
-            </motion.div>
+            </div>
+            <div className={styles.stat}>
+              <div className={styles.statValue}>{followStatus.followersCount}</div>
+              <div className={styles.statLabel}>Подписчики</div>
+            </div>
+            <div className={styles.stat}>
+              <div className={styles.statValue}>{followStatus.followingCount}</div>
+              <div className={styles.statLabel}>Подписки</div>
+            </div>
           </div>
 
           <div className={styles.details}>
             <div className={styles.detail}>
-              <Mail size={18} />
-              <span>{user?.username}@messenger.com</span>
+              <UserRound size={16} />
+              <span className={styles.detailLabel}>Ник</span>
+              <span className={styles.detailValue}>{resolvedProfile.displayName}</span>
             </div>
             <div className={styles.detail}>
-              <Phone size={18} />
-              <span>+7 (999) 123-45-67</span>
+              <Hash size={16} />
+              <span className={styles.detailLabel}>Username</span>
+              <span className={styles.detailValue}>{profileHandle}</span>
             </div>
             <div className={styles.detail}>
-              <MapPin size={18} />
-              <span>Москва, Россия</span>
+              <Phone size={16} />
+              <span className={styles.detailLabel}>Телефон</span>
+              <span className={styles.detailValue}>{resolvedProfile.phone}</span>
             </div>
             <div className={styles.detail}>
-              <Calendar size={18} />
-              <span>Регистрация: {new Date().toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' })}</span>
-            </div>
-            <div className={styles.detail}>
-              <LinkIcon size={18} />
-              <span className={styles.link} onClick={handleShare}>
-                messenger.app/{user?.username}
-              </span>
+              <CalendarDays size={16} />
+              <span className={styles.detailLabel}>В профиле с</span>
+              <span className={styles.detailValue}>{formatDate(resolvedProfile.createdAt)}</span>
             </div>
           </div>
 
           <div className={styles.actions}>
-            <motion.button
-              className={styles.editProfileBtn}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={handleEditProfile}
-            >
-              <Settings size={18} />
-              Настройки профиля
-            </motion.button>
-            
-            <motion.button
-              className={styles.shareBtn}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={handleShare}
-            >
-              <LinkIcon size={18} />
-              {copied ? 'Скопировано!' : 'Поделиться'}
-            </motion.button>
+            <button className={styles.editProfileBtn} onClick={() => navigate('/settings')}>
+              <Edit3 size={16} />
+              Открыть настройки
+            </button>
+            <button className={styles.shareBtn} onClick={handleCopyLink}>
+              <Copy size={16} />
+              {copied ? 'Ссылка скопирована' : 'Скопировать ссылку'}
+            </button>
           </div>
-        </motion.div>
+        </motion.section>
 
-        <motion.div 
+        <motion.section
           className={styles.card}
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.2 }}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.04 }}
         >
-          <h3 className={styles.sectionTitle}>Активность</h3>
-          
-          <div className={styles.activityList}>
-            <motion.div 
-              className={styles.activityItem}
-              whileHover={{ x: 4 }}
-            >
-              <div className={styles.activityIcon}>
-                <Mail size={20} />
-              </div>
-              <div className={styles.activityContent}>
-                <div className={styles.activityTitle}>Сообщений отправлено</div>
-                <div className={styles.activityValue}>1,234</div>
-              </div>
-            </motion.div>
-
-            <motion.div 
-              className={styles.activityItem}
-              whileHover={{ x: 4 }}
-            >
-              <div className={styles.activityIcon}>
-                <User size={20} />
-              </div>
-              <div className={styles.activityContent}>
-                <div className={styles.activityTitle}>Активных чатов</div>
-                <div className={styles.activityValue}>12</div>
-              </div>
-            </motion.div>
-
-            <motion.div 
-              className={styles.activityItem}
-              whileHover={{ x: 4 }}
-            >
-              <div className={styles.activityIcon}>
-                <Calendar size={20} />
-              </div>
-              <div className={styles.activityContent}>
-                <div className={styles.activityTitle}>Дней в сети</div>
-                <div className={styles.activityValue}>45</div>
-              </div>
-            </motion.div>
-          </div>
-        </motion.div>
+          <h4 className={styles.sectionTitle}>Последние публикации</h4>
+          {recentPosts.length === 0 ? (
+            <div className={styles.emptyState}>
+              <FileText size={18} />
+              Публикаций пока нет
+            </div>
+          ) : (
+            <div className={styles.activityList}>
+              {recentPosts.map((post) => (
+                <div key={post.id} className={styles.activityItem}>
+                  <div className={styles.activityContent}>
+                    <p className={styles.activityValue}>{post.content}</p>
+                    <p className={styles.activityTitle}>
+                      {formatDate(post.createdAt)} • ❤ {post.likes} • 💬 {post.comments} • ↻ {post.reposts}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </motion.section>
       </div>
-    </motion.div>
+    </div>
   );
 };
