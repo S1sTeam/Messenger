@@ -61,6 +61,11 @@ export const App = () => {
           },
         });
 
+        if (response.status === 401) {
+          logout();
+          return;
+        }
+
         if (!response.ok) return;
 
         const data = await response.json();
@@ -71,7 +76,7 @@ export const App = () => {
     };
 
     syncTheme();
-  }, [token]);
+  }, [token, logout]);
   
   useEffect(() => {
     if (socket) {
@@ -124,7 +129,7 @@ export const App = () => {
   };
 
   return (
-    <BrowserRouter>
+    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <Routes>
         <Route 
           path="/login" 

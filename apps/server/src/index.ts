@@ -28,6 +28,9 @@ const defaultCorsOrigins = [
   'http://localhost:5173',
   'http://localhost:5174',
   'http://localhost:5175',
+  'http://127.0.0.1:5173',
+  'http://127.0.0.1:5174',
+  'http://127.0.0.1:5175',
   'tauri://localhost',
   'http://tauri.localhost',
   'https://tauri.localhost',
@@ -39,11 +42,33 @@ const envCorsOrigins = (process.env.CORS_ORIGINS || process.env.ALLOWED_ORIGINS 
   .filter(Boolean);
 
 const corsOrigins = Array.from(new Set([...defaultCorsOrigins, ...envCorsOrigins]));
+const corsOriginSet = new Set(corsOrigins);
 const corsMethods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'];
+const localhostOriginPattern = /^http:\/\/(?:localhost|127\.0\.0\.1):\d+$/;
+const localNetworkPattern = /^http:\/\/192\.168\.\d+\.\d+:\d+$/;
+
+const isOriginAllowed = (origin?: string) => {
+  if (!origin) return true;
+
+  if (corsOriginSet.has(origin)) return true;
+  if (localhostOriginPattern.test(origin)) return true;
+  if (localNetworkPattern.test(origin)) return true;
+
+  return false;
+};
+
+const resolveCorsOrigin = (origin: string | undefined, callback: (error: Error | null, allow?: boolean) => void) => {
+  if (isOriginAllowed(origin)) {
+    callback(null, true);
+    return;
+  }
+
+  callback(new Error(`CORS blocked for origin: ${origin || 'unknown'}`));
+};
 
 const io = new Server(httpServer, {
   cors: {
-    origin: corsOrigins,
+    origin: resolveCorsOrigin,
     credentials: true,
     methods: corsMethods,
   },
@@ -54,7 +79,7 @@ const io = new Server(httpServer, {
 
 app.use(
   cors({
-    origin: corsOrigins,
+    origin: resolveCorsOrigin,
     credentials: true,
     methods: corsMethods,
   })

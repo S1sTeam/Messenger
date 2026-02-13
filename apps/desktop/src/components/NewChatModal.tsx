@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Search, User, Loader } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
+import { toBackendUrl } from '../config/network';
 import styles from './NewChatModal.module.css';
 
 interface User {
@@ -33,9 +34,14 @@ export const NewChatModal = ({ isOpen, onClose, onCreateChat }: NewChatModalProp
       return;
     }
 
+    if (!token) {
+      setUsers([]);
+      return;
+    }
+
     setLoading(true);
     try {
-      const response = await fetch(`http://localhost:3000/api/users/search?q=${encodeURIComponent(query)}`, {
+      const response = await fetch(toBackendUrl(`/api/users/search?q=${encodeURIComponent(query)}`), {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -44,6 +50,12 @@ export const NewChatModal = ({ isOpen, onClose, onCreateChat }: NewChatModalProp
       if (response.ok) {
         const data = await response.json();
         setUsers(data.users);
+        return;
+      }
+
+      if (response.status === 401) {
+        setUsers([]);
+        return;
       }
     } catch (error) {
       console.error('Search error:', error);

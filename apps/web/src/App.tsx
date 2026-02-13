@@ -6,11 +6,13 @@ import { IncomingCallModal } from './components/IncomingCallModal';
 import { CallModal } from './components/CallModal';
 import { useAuthStore } from './store/authStore';
 import { useChatStore } from './store/chatStore';
+import { toBackendUrl } from './config/network';
 import './styles/global.css';
 
 export const App = () => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const user = useAuthStore((state) => state.user);
+  const token = useAuthStore((state) => state.token);
   const logout = useAuthStore((state) => state.logout);
   const socket = useChatStore((state) => state.socket);
   
@@ -34,6 +36,28 @@ export const App = () => {
       window.location.reload();
     }
   }, [isAuthenticated, user, logout]);
+
+  useEffect(() => {
+    const validateSession = async () => {
+      if (!token) return;
+
+      try {
+        const response = await fetch(toBackendUrl('/api/settings'), {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (response.status === 401) {
+          logout();
+        }
+      } catch (error) {
+        console.error('Session validation failed:', error);
+      }
+    };
+
+    validateSession();
+  }, [token, logout]);
   
   useEffect(() => {
     if (socket) {
@@ -74,7 +98,7 @@ export const App = () => {
   };
 
   return (
-    <BrowserRouter>
+    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <Routes>
         <Route 
           path="/login" 
